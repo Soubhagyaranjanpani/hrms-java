@@ -12,6 +12,7 @@ import com.hrms.employee.infrastructure.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,7 +28,7 @@ public class LoginEmployeeUseCase {
 
         Employee employee = employeeRepository.findByEmail(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("Invalid user"));
-
+        System.out.println(new BCryptPasswordEncoder().encode("pass"));
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         employee.getEmail(),

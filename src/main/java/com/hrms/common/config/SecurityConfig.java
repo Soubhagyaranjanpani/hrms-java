@@ -61,13 +61,12 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // ✅ Public endpoints
-                        .requestMatchers(
-                                "/auth/**",
-                                "/employee/login",
-                                "/employee/create-first",
-                                "/employee/send-otp/**",
-                                "/employee/reset-password"
-                        ).permitAll()
+                                .requestMatchers(
+                                        "/api/employees/login",
+                                        "/hrms/api/employees/create-first",
+                                        "/hrms/api/employees/send-otp/**",
+                                        "/hrms/api/employees/reset-password"
+                                ).permitAll()
                         // ✅ Swagger endpoints - Make these completely public
                         .requestMatchers(
                                 "/swagger-ui/**",

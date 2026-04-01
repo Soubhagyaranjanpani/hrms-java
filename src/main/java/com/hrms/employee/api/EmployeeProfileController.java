@@ -16,6 +16,19 @@ public class EmployeeProfileController {
     private final AddQualificationUseCase addQualificationUseCase;
     private final AddSkillUseCase addSkillUseCase;
     private final AddTrainingUseCase addTrainingUseCase;
+    private final GetEmployeeServiceBookUseCase getEmployeeServiceBookUseCase;
+    private final PromoteEmployeeUseCase promoteEmployeeUseCase;
+    private final TransferEmployeeUseCase transferEmployeeUseCase;
+
+    @PostMapping("/promote")
+    public String promote(@RequestBody PromotionRequest req, Principal p) {
+        return promoteEmployeeUseCase.execute(req, p.getName());
+    }
+
+    @PostMapping("/transfer")
+    public String transfer(@RequestBody TransferRequest req, Principal p) {
+        return transferEmployeeUseCase.execute(req, p.getName());
+    }
 
 
     @PostMapping("/qualification")
@@ -35,5 +48,9 @@ public class EmployeeProfileController {
     @GetMapping("/full/{employeeId}")
     public Object getFullProfile(@PathVariable Long employeeId) {
         return getEmployeeFullProfileUseCase.execute(employeeId);
+    }
+    @GetMapping("/service-book/{employeeId}")
+    public Object getServiceBook(@PathVariable Long employeeId) {
+        return getEmployeeServiceBookUseCase.execute(employeeId);
     }
 }

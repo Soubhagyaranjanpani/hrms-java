@@ -5,6 +5,7 @@ import com.hrms.document.infrastructure.EmployeeDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -13,7 +14,7 @@ public class GetEmployeeDocumentsUseCase {
 
     private final EmployeeDocumentRepository repo;
 
-    public Object execute(Long employeeId) {
+    public List<DocumentResponse> execute(Long employeeId) {
 
         return repo.findByEmployee_Id(employeeId)
                 .stream()
