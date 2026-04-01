@@ -34,4 +34,5 @@ public interface LeaveRepository extends JpaRepository<Leave, Long> {
 
     // Date range query
     List<Leave> findByStartDateBetweenAndIsDeletedFalse(LocalDate start, LocalDate end);
+
 }

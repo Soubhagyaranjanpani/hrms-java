@@ -42,8 +42,14 @@ public class Leave {
 
     private String rejectionReason;
 
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_approver_id")
+    private Employee currentApprover;
+
+    private Integer currentApprovalLevel = 1;
 }
