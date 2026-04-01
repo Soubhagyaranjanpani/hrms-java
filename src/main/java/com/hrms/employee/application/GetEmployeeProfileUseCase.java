@@ -3,7 +3,7 @@ package com.hrms.employee.application;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.utils.ResponseUtils;
 import com.hrms.employee.domain.Employee;
-import com.hrms.employee.dto.response.EmployeeProfileResponse;
+import com.hrms.employee.dto.EmployeeProfileResponse;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

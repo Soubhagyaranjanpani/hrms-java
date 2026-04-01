@@ -1,5 +1,6 @@
 package com.hrms.leave.application;
 
+import com.hrms.audit.application.AuditLogService;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import com.hrms.leave.domain.*;
@@ -22,6 +23,7 @@ public class ApplyLeaveUseCase {
     private final LeaveRepository leaveRepo;
     private final LeaveBalanceRepository balanceRepo;
     private final LeavePolicyRepository policyRepo;
+    private final AuditLogService auditLogService;
 
     private final LeavePolicyEngine policyEngine;
 
@@ -82,6 +84,15 @@ public class ApplyLeaveUseCase {
         leave.setStatus(LeaveStatus.PENDING);
 
         leaveRepo.save(leave);
+
+        auditLogService.log(
+                "LEAVE",
+                leave.getId(),
+                "LEAVE_APPLIED",
+                emp.getEmail(),
+                null,
+                leave
+        );
 
         return "Leave applied successfully";
     }

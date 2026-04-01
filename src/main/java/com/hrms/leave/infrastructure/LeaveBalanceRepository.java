@@ -12,14 +12,12 @@ import java.util.Optional;
 
 public interface LeaveBalanceRepository extends JpaRepository<LeaveBalance, Long> {
 
-    // 🔥 Get balance (used in apply leave)
     Optional<LeaveBalance> findByEmployeeAndLeaveTypeAndYear(
             Employee employee,
             LeaveType leaveType,
             Integer year
     );
 
-    // 🔥 Lock for concurrency (VERY IMPORTANT)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT lb FROM LeaveBalance lb
@@ -31,9 +29,10 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalance, Long
                                          @Param("leaveType") LeaveType leaveType,
                                          @Param("year") Integer year);
 
-    // Used in accrual job
     List<LeaveBalance> findByLeaveType(LeaveType leaveType);
 
-    // Fetch all balances for employee
     List<LeaveBalance> findByEmployee(Employee employee);
+
+    // 🔥 ADD THIS (FIX)
+    Optional<LeaveBalance> findTopByEmployee_IdOrderByYearDesc(Long employeeId);
 }

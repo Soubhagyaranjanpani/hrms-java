@@ -1,4 +1,4 @@
-package com.hrms.employee.dto.request;
+package com.hrms.employee.dto;
 
 
 

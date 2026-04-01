@@ -1,5 +1,6 @@
 package com.hrms.leave.application;
 
+import com.hrms.audit.application.AuditLogService;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import com.hrms.leave.domain.*;
@@ -25,13 +26,15 @@ public class ApproveLeaveUseCase {
     private final LeaveBalanceRepository balanceRepo;
     private final LeaveApprovalConfigRepository configRepo;
     private final ApproverResolver approverResolver;
-
+    private final AuditLogService auditLogService;
     @Transactional
     public String execute(LeaveApprovalRequest request, String approverEmail) {
+
 
         // 1. Fetch Leave
         Leave leave = leaveRepo.findById(request.getLeaveId())
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
+        LeaveStatus oldStatus = leave.getStatus();
 
         // 2. Fetch Approver
         Employee approver = employeeRepo.findByEmail(approverEmail)
@@ -121,6 +124,15 @@ public class ApproveLeaveUseCase {
 
         // 8. Save leave
         leaveRepo.save(leave);
+
+        auditLogService.log(
+                "LEAVE",
+                leave.getId(),
+                "LEAVE_APPROVED_LEVEL_" + currentLevel,
+                approverEmail,
+                oldStatus,
+                leave.getStatus()
+        );
 
         return "Leave approved successfully";
     }

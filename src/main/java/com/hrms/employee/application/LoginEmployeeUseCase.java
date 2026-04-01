@@ -1,5 +1,6 @@
 package com.hrms.employee.application;
 
+import com.hrms.audit.application.AuditLogService;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.JwtHelper;
 import com.hrms.common.security.JwtRequest;
@@ -20,6 +21,7 @@ public class LoginEmployeeUseCase {
     private final EmployeeRepository employeeRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtHelper jwtHelper;
+    private final AuditLogService auditLogService;
 
     public ApiResponse<JwtResponse> execute(JwtRequest request) {
 
@@ -40,6 +42,14 @@ public class LoginEmployeeUseCase {
                 .username(employee.getEmail())
                 .employeeId(employee.getId())
                 .build();
+        auditLogService.log(
+                "AUTH",
+                employee.getId(),
+                "LOGIN",
+                employee.getEmail(),
+                null,
+                "Login success"
+        );
 
         return ResponseUtils.createSuccessResponse(response, null);
     }

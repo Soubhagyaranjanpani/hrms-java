@@ -1,7 +1,7 @@
 package com.hrms.employee.application;
 
 import com.hrms.employee.domain.Employee;
-import com.hrms.employee.dto.request.ResetPasswordReq;
+import com.hrms.employee.dto.ResetPasswordReq;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.DefaultResponse;

@@ -1,5 +1,6 @@
 package com.hrms.leave.application;
 
+import com.hrms.audit.application.AuditLogService;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import com.hrms.leave.domain.*;
@@ -19,6 +20,7 @@ public class RejectLeaveUseCase {
     private final LeaveRepository leaveRepo;
     private final EmployeeRepository employeeRepo;
     private final LeaveApprovalHistoryRepository historyRepo;
+    private final AuditLogService auditLogService;
 
     @Transactional
     public String execute(LeaveApprovalRequest request, String approverEmail) {
@@ -47,6 +49,14 @@ public class RejectLeaveUseCase {
         leave.setRejectionReason(request.getRemarks());
 
         leaveRepo.save(leave);
+        auditLogService.log(
+                "LEAVE",
+                leave.getId(),
+                "LEAVE_REJECTED",
+                approverEmail,
+                LeaveStatus.PENDING,
+                LeaveStatus.REJECTED
+        );
 
         return "Leave rejected";
     }

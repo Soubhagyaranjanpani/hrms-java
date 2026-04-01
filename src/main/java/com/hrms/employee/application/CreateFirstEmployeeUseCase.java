@@ -1,7 +1,8 @@
 package com.hrms.employee.application;
 
+import com.hrms.audit.application.AuditLogService;
 import com.hrms.employee.domain.Employee;
-import com.hrms.employee.dto.request.EmployeeCreationReq;
+import com.hrms.employee.dto.EmployeeCreationReq;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.DefaultResponse;
@@ -16,6 +17,11 @@ public class CreateFirstEmployeeUseCase {
 
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
+
+
+
+
 
     public ApiResponse<DefaultResponse> execute(EmployeeCreationReq request) {
 
@@ -32,6 +38,14 @@ public class CreateFirstEmployeeUseCase {
 
         DefaultResponse res = new DefaultResponse();
         res.setMsg("First Employee Created Successfully");
+        auditLogService.log(
+                "EMPLOYEE",
+                emp.getId(),
+                "CREATE",
+                request.getEmail(),
+                null,
+                emp
+        );
 
         return ResponseUtils.createSuccessResponse(res, null);
     }
