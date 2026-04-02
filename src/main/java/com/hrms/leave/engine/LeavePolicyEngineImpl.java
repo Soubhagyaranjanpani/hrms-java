@@ -1,61 +1,77 @@
 package com.hrms.leave.engine;
 
 import com.hrms.employee.domain.Employee;
-import com.hrms.leave.domain.*;
+import com.hrms.leave.domain.LeavePolicy;
 import com.hrms.leave.dto.LeaveApplyRequest;
 import com.hrms.leave.infrastructure.HolidayRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Service
+@Component
 @RequiredArgsConstructor
 public class LeavePolicyEngineImpl implements LeavePolicyEngine {
 
     private final HolidayRepository holidayRepo;
 
+    // 🔥 VALIDATION LOGIC
     @Override
-    public void validate(LeaveApplyRequest request, Employee emp, LeavePolicy policy) {
+    public void validate(LeaveApplyRequest request, Employee employee, LeavePolicy policy) {
 
-        if (request.getStartDate().isAfter(request.getEndDate())) {
-            throw new RuntimeException("Invalid date range");
+        LocalDate start = request.getStartDate();
+        LocalDate end = request.getEndDate();
+
+        // ❌ Invalid date range
+        if (start.isAfter(end)) {
+            throw new RuntimeException("Start date cannot be after end date");
         }
 
+        // ❌ Backdated leave not allowed
         if (Boolean.FALSE.equals(policy.getAllowBackdatedLeave())
-                && request.getStartDate().isBefore(LocalDate.now())) {
+                && start.isBefore(LocalDate.now())) {
             throw new RuntimeException("Backdated leave not allowed");
         }
 
-        if (Boolean.TRUE.equals(request.getIsHalfDay())
-                && Boolean.FALSE.equals(policy.getAllowHalfDay())) {
-            throw new RuntimeException("Half day not allowed");
+        // ❌ Max days validation
+        long days = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
+
+        if (policy.getMaxLeaveDaysPerRequest() != null && days > policy.getMaxLeaveDaysPerRequest()) {
+            throw new RuntimeException("Exceeds maximum allowed leave days");
         }
+
+        // ❌ Half-day validation
+        if (Boolean.TRUE.equals(request.getIsHalfDay()) && !start.equals(end)) {
+            throw new RuntimeException("Half day allowed only for single day leave");
+        }
+
+        // ❌ Future extension: overlapping leave check (recommended)
     }
 
+    // 🔥 CALCULATION LOGIC
     @Override
     public double calculateLeaveDays(LeaveApplyRequest request, LeavePolicy policy) {
 
         LocalDate start = request.getStartDate();
         LocalDate end = request.getEndDate();
 
-        List<Holiday> holidays = holidayRepo.findByDateBetween(start, end);
-
-        // 🔥 OPTIMIZATION
-        Set<LocalDate> holidayDates = holidays.stream()
-                .map(Holiday::getDate)
+        // Fetch holidays once
+        Set<LocalDate> holidays = holidayRepo.findByDateBetween(start, end)
+                .stream()
+                .map(h -> h.getDate())
                 .collect(Collectors.toSet());
 
         double totalDays = 0;
 
+        // Base calculation
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
 
             boolean isWeekend = isWeekend(date);
-            boolean isHoliday = holidayDates.contains(date);
+            boolean isHoliday = holidays.contains(date);
 
             if (Boolean.FALSE.equals(policy.getHolidayIncludedInLeave()) && isHoliday) {
                 continue;
@@ -68,69 +84,50 @@ public class LeavePolicyEngineImpl implements LeavePolicyEngine {
             totalDays++;
         }
 
-        // Half-day validation
+        // Half-day override
         if (Boolean.TRUE.equals(request.getIsHalfDay())) {
-            if (!start.equals(end)) {
-                throw new RuntimeException("Half day only allowed for single day");
-            }
-            totalDays = 0.5;
+            return 0.5;
         }
 
         // Sandwich logic
         if (Boolean.TRUE.equals(policy.getSandwichPolicyEnabled())) {
-            totalDays = applySandwichPolicy(start, end, holidayDates, totalDays);
+            totalDays = applySandwichPolicy(start, end, holidays, totalDays);
         }
 
         return totalDays;
     }
-    // -----------------------------------------
-    // Weekend Logic
-    // -----------------------------------------
-    private boolean isWeekend(LocalDate date) {
-        return date.getDayOfWeek() == DayOfWeek.SATURDAY ||
-                date.getDayOfWeek() == DayOfWeek.SUNDAY;
-    }
 
-    // -----------------------------------------
-    // Sandwich Policy Logic (🔥 IMPORTANT)
-    // -----------------------------------------
-    private double applySandwichPolicy(LocalDate start,
-                                       LocalDate end,
-                                       Set<LocalDate> holidayDates,
-                                       double currentDays) {
+    // 🔥 SANDWICH LOGIC
+    private double applySandwichPolicy(
+            LocalDate start,
+            LocalDate end,
+            Set<LocalDate> holidays,
+            double totalDays
+    ) {
 
-        // No sandwich possible for single day
-        if (start.equals(end)) {
-            return currentDays;
-        }
+        Set<LocalDate> sandwichDays = new HashSet<>();
 
-        boolean hasSandwichGap = false;
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
 
-        for (LocalDate date = start.plusDays(1);
-             date.isBefore(end);
-             date = date.plusDays(1)) {
+            if (isWeekend(date) || holidays.contains(date)) {
 
-            boolean isWeekend = isWeekend(date);
-            boolean isHoliday = holidayDates.contains(date);
+                LocalDate prev = date.minusDays(1);
+                LocalDate next = date.plusDays(1);
 
-            if (isWeekend || isHoliday) {
-                hasSandwichGap = true;
+                boolean hasLeaveBefore = !prev.isBefore(start);
+                boolean hasLeaveAfter = !next.isAfter(end);
+
+                if (hasLeaveBefore && hasLeaveAfter) {
+                    sandwichDays.add(date);
+                }
             }
         }
 
-        /*
-         * Sandwich Rule:
-         * If leave is applied across days AND
-         * there are weekends/holidays in between,
-         * then count full span
-         *
-         * Example:
-         * Fri + Mon → Sat/Sun counted
-         */
-        if (hasSandwichGap) {
-            return start.until(end).getDays() + 1;
-        }
+        return totalDays + sandwichDays.size();
+    }
 
-        return currentDays;
+    private boolean isWeekend(LocalDate date) {
+        return date.getDayOfWeek() == DayOfWeek.SATURDAY ||
+                date.getDayOfWeek() == DayOfWeek.SUNDAY;
     }
 }

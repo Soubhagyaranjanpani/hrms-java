@@ -1,5 +1,6 @@
 package com.hrms.leave.infrastructure;
 
+import com.hrms.employee.domain.Employee;
 import com.hrms.leave.domain.Leave;
 import com.hrms.leave.domain.enums.LeaveStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,5 +35,20 @@ public interface LeaveRepository extends JpaRepository<Leave, Long> {
 
     // Date range query
     List<Leave> findByStartDateBetweenAndIsDeletedFalse(LocalDate start, LocalDate end);
+    List<Leave> findByEmployeeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Employee employee,
+            LocalDate endDate,
+            LocalDate startDate
+    );
+
+    // 🔥 For attendance integration
+    boolean existsByEmployeeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            Employee employee,
+            LocalDate endDate,
+            LocalDate startDate
+    );
+
+    // 🔥 Team leaves
+    List<Leave> findByEmployee(Employee employee);
 
 }

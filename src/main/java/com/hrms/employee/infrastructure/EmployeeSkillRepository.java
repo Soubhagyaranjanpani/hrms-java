@@ -8,4 +8,5 @@ import java.util.List;
 public interface EmployeeSkillRepository extends JpaRepository<EmployeeSkill, Long> {
 
     List<EmployeeSkill> findByEmployee_Id(Long employeeId);
+    List<EmployeeSkill> findBySkillName(String skillName);
 }

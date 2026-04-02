@@ -2,49 +2,59 @@ package com.hrms.attendance.domain;
 
 import com.hrms.employee.domain.Employee;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
+@Getter
+@Setter
 @Table(
         name = "attendance",
         uniqueConstraints = {
                 @UniqueConstraint(columnNames = {"employee_id", "date"})
+        },
+        indexes = {
+                @Index(name = "idx_attendance_employee_date", columnList = "employee_id, date")
         }
 )
-@Data
 public class Attendance {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Employee reference
+    // 🔗 Employee reference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    // Attendance date
+    // 📅 Attendance date
     @Column(nullable = false)
     private LocalDate date;
 
-    // Status using ENUM
+    // 📌 Status (ENUM)
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AttendanceStatus status;
+    private AttendanceStatus status = AttendanceStatus.ABSENT;
 
-    // Time tracking
+    // ⏰ Time tracking
     private LocalTime checkIn;
     private LocalTime checkOut;
 
-    // Calculated fields
+    // 📊 Calculated fields
     private Double workingHours;
     private Double overtimeHours;
 
-    // Audit fields
+    // 🧾 Flags
+    private Boolean isManualEntry = false;
+
+    private Boolean isDeleted = false;
+
+    // 🧾 Audit fields
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
@@ -53,14 +63,16 @@ public class Attendance {
     private String createdBy;
     private String updatedBy;
 
-    // Soft delete flag
-    private Boolean isDeleted = false;
-
-    // Lifecycle hooks
+    // 🔄 Lifecycle hooks
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
-        this.isDeleted = false;
+        if (this.isDeleted == null) {
+            this.isDeleted = false;
+        }
+        if (this.status == null) {
+            this.status = AttendanceStatus.ABSENT;
+        }
     }
 
     @PreUpdate
