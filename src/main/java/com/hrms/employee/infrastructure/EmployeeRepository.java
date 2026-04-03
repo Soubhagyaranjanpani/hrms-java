@@ -2,6 +2,9 @@ package com.hrms.employee.infrastructure;
 
 
 
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.hrms.employee.domain.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -39,4 +42,23 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     // 🔍 Search
     List<Employee> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String firstName, String lastName);
+
+    Page<Employee> findByIsDeletedFalse(Pageable pageable);
+
+    Page<Employee> findByFirstNameContainingIgnoreCaseAndIsDeletedFalse(
+            String name,
+            Pageable pageable
+    );
+
+    Page<Employee> findByIsActiveAndIsDeletedFalse(
+            Boolean isActive,
+            Pageable pageable
+    );
+
+    Page<Employee> findByFirstNameContainingIgnoreCaseAndIsActiveAndIsDeletedFalse(
+            String name,
+            Boolean isActive,
+            Pageable pageable
+    );
+    Optional<Employee> findByIdAndIsDeletedFalse(Long id);
 }
