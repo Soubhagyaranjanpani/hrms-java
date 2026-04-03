@@ -63,7 +63,7 @@ public class SecurityConfig {
                         // ✅ Public endpoints
                                 .requestMatchers(
                                         "/api/employees/login",
-                                        "/hrms/api/employees/create-first",
+                                        "/api/employees/create-first",
                                         "/hrms/api/employees/send-otp/**",
                                         "/hrms/api/employees/reset-password"
                                 ).permitAll()
