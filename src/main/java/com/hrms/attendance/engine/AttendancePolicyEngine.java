@@ -12,7 +12,9 @@ public class AttendancePolicyEngine {
 
     public void applyPolicy(Attendance att, AttendancePolicy policy) {
 
-        if (att.getCheckIn() == null || att.getCheckOut() == null) return;
+        if (att.getCheckIn() == null || att.getCheckOut() == null) {
+            return;
+        }
 
         double hours = Duration.between(
                 att.getCheckIn(),
@@ -21,30 +23,45 @@ public class AttendancePolicyEngine {
 
         att.setWorkingHours(hours);
 
-        // 🔥 Half day
-        if (hours < policy.getHalfDayThresholdHours()) {
-            att.setStatus(AttendanceStatus.HALF_DAY);
-        }
+        // 🔥 STATUS CALCULATION (ORDER MATTERS)
 
-        // 🔥 Full day
-        if (hours >= policy.getFullDayHours()) {
+        if (hours < policy.getHalfDayThresholdHours()) {
+            att.setStatus(AttendanceStatus.ABSENT);
+
+        } else if (hours < policy.getFullDayHours()) {
+            att.setStatus(AttendanceStatus.HALF_DAY);
+
+        } else {
             att.setStatus(AttendanceStatus.PRESENT);
         }
 
-        // 🔥 Overtime
+        // 🔥 OVERTIME (only for full day)
         if (hours > policy.getFullDayHours()) {
             att.setOvertimeHours(hours - policy.getFullDayHours());
+        } else {
+            att.setOvertimeHours(0.0);
         }
 
-//        // 🔥 Late login
-//        if (att.getCheckIn().isAfter(
-//                policy.getShiftStart().plusMinutes(policy.getGraceMinutes()))) {
-//            att.setIsLate(true);
-//        }
-//
-//        // 🔥 Early exit
-//        if (att.getCheckOut().isBefore(policy.getShiftEnd())) {
-//            att.setIsEarlyExit(true);
-//        }
+        // 🔥 LATE LOGIN
+        if (policy.getShiftStart() != null && policy.getGraceMinutes() != null) {
+
+            if (att.getCheckIn().isAfter(
+                    policy.getShiftStart().plusMinutes(policy.getGraceMinutes()))) {
+
+                att.setIsLate(true);
+            } else {
+                att.setIsLate(false);
+            }
+        }
+
+        // 🔥 EARLY EXIT
+        if (policy.getShiftEnd() != null) {
+
+            if (att.getCheckOut().isBefore(policy.getShiftEnd())) {
+                att.setIsEarlyExit(true);
+            } else {
+                att.setIsEarlyExit(false);
+            }
+        }
     }
 }

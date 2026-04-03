@@ -25,18 +25,15 @@ public class AttendanceController {
     @PostMapping("/check-in")
     public ApiResponse<String> checkIn(Principal p) {
 
-        return ResponseUtils.createSuccessResponse(
-                checkInUseCase.execute(p.getName()),
-                new TypeReference<>() {}
-        );
+        return (
+                checkInUseCase.execute(p.getName()));
     }
 
     @PostMapping("/check-out")
     public ApiResponse<String> checkOut(Principal p) {
 
-        return ResponseUtils.createSuccessResponse(
-                checkOutUseCase.execute(p.getName()),
-                new TypeReference<>() {}
+        return (
+                checkOutUseCase.execute(p.getName())
         );
     }
 

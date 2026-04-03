@@ -5,6 +5,7 @@ import com.hrms.attendance.domain.AttendancePolicy;
 import com.hrms.attendance.engine.AttendancePolicyEngine;
 import com.hrms.attendance.infrastructure.AttendancePolicyRepository;
 import com.hrms.attendance.infrastructure.AttendanceRepository;
+import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,41 +25,56 @@ public class CheckOutUseCase {
     private final AttendancePolicyRepository policyRepo;
     private final AttendancePolicyEngine policyEngine;
 
-    public String execute(String email) {
+    public ApiResponse<String> execute(String email) {
 
         // 🔹 STEP 1: Fetch employee
-        Employee employee = employeeRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepo.findByEmail(email).orElse(null);
+
+        if (employee == null || Boolean.TRUE.equals(employee.getIsDeleted())) {
+            return new ApiResponse<>("FAILURE", "Employee not found", null);
+        }
 
         // 🔹 STEP 2: Fetch today's attendance
         Attendance attendance = attendanceRepo
                 .findByEmployeeAndDate(employee, LocalDate.now())
-                .orElseThrow(() -> new RuntimeException("Check-in not found"));
+                .orElse(null);
 
-        // 🔹 STEP 3: Prevent duplicate checkout
-        if (attendance.getCheckOut() != null) {
-            throw new RuntimeException("Already checked out");
+        if (attendance == null) {
+            return new ApiResponse<>("FAILURE", "Check-in not found", null);
         }
 
-        // 🔹 STEP 4: Set checkout time
+        // 🔹 STEP 3: Validate check-in exists
+        if (attendance.getCheckIn() == null) {
+            return new ApiResponse<>("FAILURE", "Check-in missing", null);
+        }
+
+        // 🔹 STEP 4: Prevent duplicate checkout
+        if (attendance.getCheckOut() != null) {
+            return new ApiResponse<>("FAILURE", "Already checked out", null);
+        }
+
+        // 🔹 STEP 5: Set checkout time
         attendance.setCheckOut(LocalTime.now());
 
-        // 🔹 STEP 5: Fetch active attendance policy
-        AttendancePolicy policy = policyRepo.findByIsActiveTrue()
-                .orElseThrow(() -> new RuntimeException("Attendance policy not configured"));
+        // 🔹 STEP 6: Fetch active policy
+        AttendancePolicy policy = policyRepo.findByIsActiveTrue().orElse(null);
 
-        // 🔥 STEP 6: Apply policy (core business logic)
+        if (policy == null) {
+            return new ApiResponse<>("FAILURE", "Attendance policy not configured", null);
+        }
+
+        // 🔥 STEP 7: Apply business logic
         policyEngine.applyPolicy(attendance, policy);
 
-        // 🔹 STEP 7: Audit fields
+        // 🔹 STEP 8: Audit
         attendance.setUpdatedBy(email);
 
-        // 🔹 STEP 8: Save attendance
+        // 🔹 STEP 9: Save
         attendanceRepo.save(attendance);
 
-        // 🔹 STEP 9: Logging (optional but recommended)
-        log.info("Employee {} checked out successfully at {}", email, attendance.getCheckOut());
+        // 🔹 STEP 10: Logging
+        log.info("Employee {} checked out at {}", email, attendance.getCheckOut());
 
-        return "Checked out successfully";
+        return new ApiResponse<>("SUCCESS", "Checked out successfully", null);
     }
 }

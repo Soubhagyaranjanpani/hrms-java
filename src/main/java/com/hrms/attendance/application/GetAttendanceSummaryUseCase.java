@@ -21,22 +21,30 @@ public class GetAttendanceSummaryUseCase {
 
     public AttendanceSummaryResponse execute(String email, int month, int year) {
 
-        Employee emp = empRepo.findByEmail(email).orElseThrow();
+        Employee emp = empRepo.findByEmail(email).orElse(null);
+
+        if (emp == null || Boolean.TRUE.equals(emp.getIsDeleted())) {
+            throw new RuntimeException("Employee not found");
+        }
 
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
 
-        List<Attendance> list = attendanceRepo.findByEmployeeAndDateBetween(emp, start, end);
+        List<Attendance> list = attendanceRepo
+                .findByEmployeeAndDateBetweenAndIsDeletedFalse(emp, start, end);
 
         AttendanceSummaryResponse res = new AttendanceSummaryResponse();
 
         for (Attendance a : list) {
+
+            if (a.getStatus() == null) continue;
 
             switch (a.getStatus()) {
                 case PRESENT -> res.setPresentDays(res.getPresentDays() + 1);
                 case ABSENT -> res.setAbsentDays(res.getAbsentDays() + 1);
                 case LEAVE -> res.setLeaveDays(res.getLeaveDays() + 1);
                 case HALF_DAY -> res.setHalfDays(res.getHalfDays() + 1);
+                default -> {}
             }
 
             if (a.getWorkingHours() != null) {

@@ -75,6 +75,13 @@ public class Attendance {
         }
     }
 
+    // 🔥 ADD THESE
+    @Column(nullable = false)
+    private Boolean isLate = false;
+
+    @Column(nullable = false)
+    private Boolean isEarlyExit = false;
+
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
