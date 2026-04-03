@@ -7,8 +7,6 @@ import com.hrms.employee.infrastructure.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 public class DeleteEmployeeUseCase {
@@ -17,21 +15,18 @@ public class DeleteEmployeeUseCase {
 
     public ApiResponse<String> execute(Long id) {
 
-        Optional<Employee> optionalEmployee =
-                employeeRepository.findByIdAndIsDeletedFalse(id);
+        Employee employee = employeeRepository.findById(id)
+                .orElse(null);
 
-        if (!optionalEmployee.isPresent()) {
-            return ResponseUtils.createFailureResponse("Not found",null,"Employee not found",404);
+        if (employee == null || Boolean.TRUE.equals(employee.getIsDeleted())) {
+            return ResponseUtils.createFailureResponse("Employee not found",null,"Employee not found",404);
         }
 
-        Employee employee = optionalEmployee.get();
-
-        // 🔥 Soft delete
         employee.setIsDeleted(true);
         employee.setIsActive(false);
 
         employeeRepository.save(employee);
 
-        return ResponseUtils.createSuccessResponse("Employee deleted successfully", null);
+        return ResponseUtils.createSuccessResponse("Employee deleted successfully",null);
     }
 }
