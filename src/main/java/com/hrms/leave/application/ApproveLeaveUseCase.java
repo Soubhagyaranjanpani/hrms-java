@@ -3,6 +3,9 @@ package com.hrms.leave.application;
 import com.hrms.audit.application.AuditLogService;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
+import com.hrms.attendance.domain.Attendance;
+import com.hrms.attendance.domain.AttendanceStatus;
+import com.hrms.attendance.infrastructure.AttendanceRepository;
 import com.hrms.leave.domain.*;
 import com.hrms.leave.domain.enums.LeaveStatus;
 import com.hrms.leave.dto.LeaveApprovalRequest;
@@ -12,6 +15,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.security.Principal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,33 +30,36 @@ public class ApproveLeaveUseCase {
     private final LeaveApprovalHistoryRepository historyRepo;
     private final LeaveBalanceRepository balanceRepo;
     private final LeaveApprovalConfigRepository configRepo;
+    private final AttendanceRepository attendanceRepo;
     private final ApproverResolver approverResolver;
     private final AuditLogService auditLogService;
+
     @Transactional
-    public String execute(LeaveApprovalRequest request, String approverEmail) {
+    public String execute(LeaveApprovalRequest request, Principal principal) {
 
-
-        // 1. Fetch Leave
+        // 🔥 1. Fetch Leave
         Leave leave = leaveRepo.findById(request.getLeaveId())
                 .orElseThrow(() -> new RuntimeException("Leave not found"));
+
         LeaveStatus oldStatus = leave.getStatus();
 
-        // 2. Fetch Approver
-        Employee approver = employeeRepo.findByEmail(approverEmail)
+        // 🔥 2. Fetch Approver (from token)
+        Employee approver = employeeRepo.findByEmail(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
 
-        // 3. Status validation
-        if (!LeaveStatus.PENDING.equals(leave.getStatus())) {
+        // 🔥 3. Validate status (multi-level safe)
+        if (!(LeaveStatus.PENDING.equals(leave.getStatus())
+                || LeaveStatus.PENDING_L2.equals(leave.getStatus()))) {
             throw new RuntimeException("Leave already processed");
         }
 
-        // 4. Authorization check
+        // 🔥 4. Authorization check
         if (leave.getCurrentApprover() != null &&
                 !leave.getCurrentApprover().getId().equals(approver.getId())) {
             throw new RuntimeException("Not authorized to approve");
         }
 
-        // 5. Fetch approval configs
+        // 🔥 5. Fetch approval configs
         List<LeaveApprovalConfig> configs =
                 configRepo.findByLeaveTypeAndIsActiveTrueOrderByLevelAsc(leave.getLeaveType());
 
@@ -66,7 +74,15 @@ public class ApproveLeaveUseCase {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Invalid approval level config"));
 
-        // 6. Save approval history
+        // 🔥 6. Prevent duplicate approval
+        boolean alreadyApproved = historyRepo.existsByLeaveAndApproverAndLevel(
+                leave, approver, currentLevel);
+
+        if (alreadyApproved) {
+            throw new RuntimeException("Already approved at this level");
+        }
+
+        // 🔥 7. Save approval history
         LeaveApprovalHistory history = new LeaveApprovalHistory();
         history.setLeave(leave);
         history.setApprover(approver);
@@ -77,7 +93,7 @@ public class ApproveLeaveUseCase {
 
         historyRepo.save(history);
 
-        // 7. Determine next level
+        // 🔥 8. Determine next level
         int nextLevel = currentLevel + 1;
 
         LeaveApprovalConfig nextConfig = configs.stream()
@@ -87,7 +103,7 @@ public class ApproveLeaveUseCase {
 
         if (nextConfig != null) {
 
-            // 🔥 Resolve next approver dynamically
+            // 🔥 Resolve next approver
             Employee nextApprover =
                     approverResolver.resolveNextApprover(leave, nextConfig);
 
@@ -95,9 +111,10 @@ public class ApproveLeaveUseCase {
                 throw new RuntimeException("Next approver not found for level " + nextLevel);
             }
 
-            // Move to next level
+            // 🔥 Move to next level
             leave.setCurrentApprovalLevel(nextLevel);
             leave.setCurrentApprover(nextApprover);
+            leave.setStatus(LeaveStatus.PENDING_L2); // 🔥 IMPORTANT
 
         } else {
 
@@ -105,7 +122,7 @@ public class ApproveLeaveUseCase {
             leave.setStatus(LeaveStatus.APPROVED);
             leave.setCurrentApprover(null);
 
-            // 🔥 Deduct balance (with locking)
+            // 🔥 Deduct balance (LOCKED)
             LeaveBalance balance = balanceRepo.findForUpdate(
                     leave.getEmployee(),
                     leave.getLeaveType(),
@@ -120,16 +137,36 @@ public class ApproveLeaveUseCase {
             balance.setRemaining(balance.getRemaining() - leave.getTotalDays());
 
             balanceRepo.save(balance);
+
+            // 🔥 MARK ATTENDANCE
+            LocalDate date = leave.getStartDate();
+
+            while (!date.isAfter(leave.getEndDate())) {
+
+                Attendance att = attendanceRepo
+                        .findByEmployeeAndDate(leave.getEmployee(), date)
+                        .orElse(new Attendance());
+
+                att.setEmployee(leave.getEmployee());
+                att.setDate(date);
+                att.setStatus(AttendanceStatus.LEAVE);
+                att.setIsManualEntry(true);
+
+                attendanceRepo.save(att);
+
+                date = date.plusDays(1);
+            }
         }
 
-        // 8. Save leave
+        // 🔥 9. Save leave
         leaveRepo.save(leave);
 
+        // 🔥 10. Audit
         auditLogService.log(
                 "LEAVE",
                 leave.getId(),
                 "LEAVE_APPROVED_LEVEL_" + currentLevel,
-                approverEmail,
+                principal.getName(),
                 oldStatus,
                 leave.getStatus()
         );

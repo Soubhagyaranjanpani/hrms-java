@@ -8,6 +8,7 @@ import com.hrms.common.utils.ResponseUtils;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.dto.EmployeeCreationReq;
 import com.hrms.employee.infrastructure.EmployeeRepository;
+import com.hrms.leave.application.InitializeLeaveBalanceUseCase;
 import com.hrms.master.domain.Branch;
 import com.hrms.master.domain.Department;
 import com.hrms.master.domain.Role;
@@ -29,7 +30,7 @@ public class CreateEmployeeUseCase {
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
     private final BranchRepository branchRepository;
-
+    private final InitializeLeaveBalanceUseCase initializeLeaveBalanceUseCase;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
 
@@ -98,6 +99,7 @@ public class CreateEmployeeUseCase {
 
         // 🔥 6. Save
         employeeRepository.save(emp);
+        initializeLeaveBalanceUseCase.execute(emp);  // 🔥 THIS LINE
 
         // 🔥 7. Audit
         auditLogService.log(

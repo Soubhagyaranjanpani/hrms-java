@@ -35,4 +35,5 @@ public class LeaveBalance {
     private Double carriedForward;
 
     private LocalDate expiryDate; // calculated based on policy
+    private LocalDate lastAccrualDate;
 }

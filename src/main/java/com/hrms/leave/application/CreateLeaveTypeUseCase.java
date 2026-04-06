@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class CreateLeaveTypeUseCase {
+    private final InitializeLeaveBalanceForAllEmployeesUseCase initAllUseCase;
 
     private final LeaveTypeRepository repo;
 
@@ -25,6 +26,7 @@ public class CreateLeaveTypeUseCase {
         type.setIsActive(true);
 
         repo.save(type);
+        initAllUseCase.execute(type);
 
         return ResponseUtils.createSuccessResponse("Leave type created",null);
     }

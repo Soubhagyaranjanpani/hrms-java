@@ -33,6 +33,11 @@ public interface LeaveBalanceRepository extends JpaRepository<LeaveBalance, Long
 
     List<LeaveBalance> findByEmployee(Employee employee);
 
+    Optional<LeaveBalance> findByEmployeeAndLeaveType(Employee emp, LeaveType lt);
+
+
     // 🔥 ADD THIS (FIX)
     Optional<LeaveBalance> findTopByEmployee_IdOrderByYearDesc(Long employeeId);
+
+    boolean existsByEmployeeAndLeaveType(Employee employee, LeaveType leaveType);
 }

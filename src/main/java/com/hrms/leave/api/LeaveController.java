@@ -29,16 +29,17 @@ public class LeaveController {
     // 🔥 APPLY LEAVE
     @Operation(summary = "Apply for leave")
     @PostMapping("/apply")
-    public ApiResponse<String> applyLeave(@RequestBody LeaveApplyRequest request) {
+    public ApiResponse<String> applyLeave(
+            @RequestBody LeaveApplyRequest request,
+            Principal principal) {
 
-        String result = applyLeaveUseCase.execute(request);
+        String result = applyLeaveUseCase.execute(request, principal);
 
         return ResponseUtils.createSuccessResponse(
                 result,
                 new TypeReference<>() {}
         );
     }
-
     // 🔥 APPROVE LEAVE
     @Operation(summary = "Approve leave")
     @PostMapping("/approve")
@@ -46,7 +47,7 @@ public class LeaveController {
             @RequestBody LeaveApprovalRequest request,
             Principal principal) {
 
-        String result = approveLeaveUseCase.execute(request, principal.getName());
+        String result = approveLeaveUseCase.execute(request, principal);
 
         return ResponseUtils.createSuccessResponse(
                 result,
