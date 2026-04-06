@@ -64,7 +64,7 @@ public class Employee implements UserDetails {
     private String profilePicture;
 
     // Organization mapping
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "department_id")
     private Department department;
 
