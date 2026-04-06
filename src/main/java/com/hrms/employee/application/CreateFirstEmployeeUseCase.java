@@ -34,9 +34,9 @@ public class CreateFirstEmployeeUseCase {
         // 🔹 2. Fetch Role (MANDATORY)
         Role role = roleRepository.findById(request.getRoleId()).orElse(null);
 
-        if (role == null) {
-            return ResponseUtils.createFailureResponse(null,null,"Role not found",400);
-        }
+//        if (role == null) {
+//            return ResponseUtils.createFailureResponse(null,null,"Role not found",400);
+//        }
 
         // 🔹 3. Create employee
         Employee emp = new Employee();

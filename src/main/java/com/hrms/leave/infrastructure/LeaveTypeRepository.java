@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface LeaveTypeRepository extends JpaRepository<LeaveType, Long> {
 
     Optional<LeaveType> findByNameAndIsActiveTrue(String name);
+    boolean existsByName(String name);
 }

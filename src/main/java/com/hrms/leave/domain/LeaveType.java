@@ -21,13 +21,7 @@ public class LeaveType {
 
     private Integer maxDaysPerYear;
 
-    private Boolean carryForwardAllowed = false;
 
-    private Integer maxCarryForwardDays;
-
-    @Enumerated(EnumType.STRING)
-    private LeaveExpiryType expiryType;
-    // YEAR_END, FINANCIAL_YEAR_END, NONE
 
     private Boolean isActive = true;
 }
