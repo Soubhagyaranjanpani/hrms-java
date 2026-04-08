@@ -35,7 +35,8 @@ public class EmployeeController {
     // ADMIN APIs
     // =========================
 
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
+
     @GetMapping
     public ResponseEntity<ApiResponse<Page<EmployeeProfileResponse>>> getAllEmployees(
             @RequestParam(required = false) String name,
@@ -48,13 +49,13 @@ public class EmployeeController {
         );
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    //    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteEmployee(@PathVariable Long id) {
         return ResponseEntity.ok(deleteEmployeeUseCase.execute(id));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    //    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> updateEmployee(
             @PathVariable Long id,
@@ -62,8 +63,7 @@ public class EmployeeController {
 
         return ResponseEntity.ok(updateEmployeeUseCase.execute(id, request));
     }
-
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<DefaultResponse>> createEmployee(
             @RequestBody EmployeeCreationReq request) {

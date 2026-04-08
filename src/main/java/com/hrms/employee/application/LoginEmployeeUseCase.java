@@ -44,6 +44,10 @@ public class LoginEmployeeUseCase {
                 .jwtToken(access.getToken())
                 .username(employee.getEmail())
                 .employeeId(employee.getId())
+                .roleId(employee.getRole().getId())
+                .roleName(employee.getRole().getName())
+                .name(employee.getFirstName())
+
                 .build();
         auditLogService.log(
                 "AUTH",
