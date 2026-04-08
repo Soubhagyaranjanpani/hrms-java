@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -78,4 +79,23 @@ JOIN l.leaveType lt
 WHERE e = :emp
 """)
     Page<LeaveResponse> findMyLeaves(Employee emp, Pageable pageable);
+    @Query("""
+SELECT new com.hrms.leave.dto.LeaveResponse(
+    l.id,
+    e.firstName,
+    lt.name,
+    l.startDate,
+    l.endDate,
+    l.totalDays,
+    l.status
+)
+FROM Leave l
+JOIN l.employee e
+JOIN l.leaveType lt
+WHERE (:status IS NULL OR l.status = :status)
+""")
+    Page<LeaveResponse> findAllProjected(
+            @Param("status") LeaveStatus status,
+            Pageable pageable
+    );
 }

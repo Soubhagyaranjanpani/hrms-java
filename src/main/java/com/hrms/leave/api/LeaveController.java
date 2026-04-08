@@ -119,10 +119,13 @@ public class LeaveController {
     }
     @PreAuthorize("hasRole('HR')")
     @GetMapping("/all")
-    public ApiResponse<List<Leave>> getAllLeaves(
-            @RequestParam(required = false) LeaveStatus status) {
+    public ApiResponse<List<LeaveResponse>> getAllLeaves(
+            @RequestParam(required = false) LeaveStatus status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        int pageIndex = Math.max(page - 1, 0);
 
-        return getAllLeavesUseCase.execute(status);
+        return getAllLeavesUseCase.execute(status, pageIndex, size);
     }
 
     @GetMapping("/dashboard")

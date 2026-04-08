@@ -5,8 +5,11 @@ import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.utils.ResponseUtils;
 import com.hrms.leave.domain.Leave;
 import com.hrms.leave.domain.enums.LeaveStatus;
+import com.hrms.leave.dto.LeaveResponse;
 import com.hrms.leave.infrastructure.LeaveRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,18 +20,15 @@ public class GetAllLeavesUseCase {
 
     private final LeaveRepository leaveRepo;
 
-    public ApiResponse<List<Leave>> execute(LeaveStatus status) {
+    public ApiResponse<List<LeaveResponse>> execute(LeaveStatus status, int page, int size) {
 
-        List<Leave> leaves;
+        PageRequest pageable = PageRequest.of(page, size);  // ✅ FIX
 
-        if (status != null) {
-            leaves = leaveRepo.findByStatus(status);
-        } else {
-            leaves = leaveRepo.findAll();
-        }
+        Page<LeaveResponse> leaves =
+                leaveRepo.findAllProjected(status, pageable);
 
         return ResponseUtils.createSuccessResponse(
-                leaves,
+                leaves.getContent(),
                 new TypeReference<>() {}
         );
     }
