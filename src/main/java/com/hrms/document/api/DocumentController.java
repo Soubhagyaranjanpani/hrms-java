@@ -7,6 +7,8 @@ import com.hrms.document.application.*;
 import com.hrms.document.dto.DocumentResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +23,7 @@ public class DocumentController {
     private final UploadDocumentUseCase uploadUseCase;
     private final GetEmployeeDocumentsUseCase getUseCase;
     private final ExtractDocumentDataUseCase extractUseCase;
+    private final ViewDownloadDocumentUseCase viewDownloadUseCase;
 
     // 🔥 Upload Document
     @Operation(summary = "Upload employee document")
@@ -70,5 +73,14 @@ public class DocumentController {
                 result,
                 new TypeReference<String>() {}
         );
+    }
+
+    @Operation(summary = "View or Download document (mode=V for view, mode=D for download)")
+    @GetMapping("/file/{documentId}")
+    public ResponseEntity<Resource> getDocumentFile(
+            @PathVariable Long documentId,
+            @RequestParam(defaultValue = "V") String mode) {
+
+        return viewDownloadUseCase.execute(documentId, mode);
     }
 }
