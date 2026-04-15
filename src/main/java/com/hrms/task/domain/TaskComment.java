@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
+@Table(name = "task_comments")
 public class TaskComment {
 
     @Id
@@ -17,9 +18,11 @@ public class TaskComment {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "task_id")
     private Task task;
 
     @ManyToOne
+    @JoinColumn(name = "created_by_id")
     private Employee createdBy;
 
     @Column(length = 1000)

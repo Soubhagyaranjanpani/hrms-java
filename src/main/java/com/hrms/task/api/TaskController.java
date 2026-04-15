@@ -17,33 +17,150 @@ import java.util.List;
 public class TaskController {
 
     private final CreateTaskUseCase createTaskUseCase;
+    private final GetAllTasksUseCase getAllTasksUseCase;
     private final GetMyTasksUseCase getMyTasksUseCase;
+    private final GetTaskByIdUseCase getTaskByIdUseCase;
     private final UpdateTaskStatusUseCase updateTaskStatusUseCase;
+    private final AddTaskCommentUseCase addTaskCommentUseCase;
+    private final SendChangeRequestUseCase sendChangeRequestUseCase;
+    private final ApproveChangeRequestUseCase approveChangeRequestUseCase;
+    private final RejectChangeRequestUseCase rejectChangeRequestUseCase;
 
+    // ──────────────────────────────────────────────────────────
+    // GET /api/tasks
+    // Used by: TaskDashboard (stats), TaskList (table + kanban)
+    // ──────────────────────────────────────────────────────────
+    @GetMapping
+    public ApiResponse<List<TaskResponse>> getAllTasks() {
+        return ResponseUtils.createSuccessResponse(
+                getAllTasksUseCase.execute(),
+                new TypeReference<>() {}
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // GET /api/tasks/my
+    // Used by: TaskList filter "Assigned to Me"
+    // ──────────────────────────────────────────────────────────
+    @GetMapping("/my")
+    public ApiResponse<List<TaskResponse>> myTasks(Principal p) {
+        return ResponseUtils.createSuccessResponse(
+                getMyTasksUseCase.execute(p.getName()),
+                new TypeReference<>() {}
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // GET /api/tasks/{id}
+    // Used by: TaskDetail (full detail with comments + subtasks + change request)
+    // ──────────────────────────────────────────────────────────
+    @GetMapping("/{id}")
+    public ApiResponse<TaskResponse> getTask(@PathVariable Long id) {
+        return ResponseUtils.createSuccessResponse(
+                getTaskByIdUseCase.execute(id),
+                new TypeReference<>() {}
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks
+    // Used by: CreateTask form
+    // ──────────────────────────────────────────────────────────
     @PostMapping
     public ApiResponse<TaskResponse> create(
             @RequestBody TaskCreateRequest req,
             Principal p) {
-
-        TaskResponse res = createTaskUseCase.execute(req, p.getName());
-
-        return ResponseUtils.createSuccessResponse(res, new TypeReference<>() {});
+        return ResponseUtils.createSuccessResponse(
+                createTaskUseCase.execute(req, p.getName()),
+                new TypeReference<>() {}
+        );
     }
 
-    @GetMapping("/my")
-    public ApiResponse<List<TaskResponse>> myTasks(Principal p) {
-
-        List<TaskResponse> data = getMyTasksUseCase.execute(p.getName());
-
-        return ResponseUtils.createSuccessResponse(data, new TypeReference<>() {});
+    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks/{id}/subtasks
+    // Used by: "Add Subtask" form inside TaskDetail overview tab
+    // ──────────────────────────────────────────────────────────
+    @PostMapping("/{id}/subtasks")
+    public ApiResponse<TaskResponse> createSubtask(
+            @PathVariable Long id,
+            @RequestBody TaskCreateRequest req,
+            Principal p) {
+        req.setParentTaskId(id);
+        return ResponseUtils.createSuccessResponse(
+                createTaskUseCase.execute(req, p.getName()),
+                new TypeReference<>() {}
+        );
     }
 
+    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks/status
+    // Used by: all action banners in TaskDetail
+    //   - Approve Task        → IN_PROGRESS
+    //   - Reject Task         → REJECTED
+    //   - Submit for Review   → IN_REVIEW
+    //   - Mark Complete       → COMPLETED
+    //   - Approve & Complete  → COMPLETED
+    //   - Send Back           → IN_PROGRESS
+    // ──────────────────────────────────────────────────────────
     @PostMapping("/status")
     public ApiResponse<String> updateStatus(
             @RequestBody TaskUpdateStatusRequest req) {
+        return ResponseUtils.createSuccessResponse(
+                updateTaskStatusUseCase.execute(req),
+                new TypeReference<>() {}
+        );
+    }
 
-        String res = updateTaskStatusUseCase.execute(req.getTaskId(), req.getStatus());
+    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks/{id}/comments
+    // Used by: Comments tab in TaskDetail
+    // ──────────────────────────────────────────────────────────
+    @PostMapping("/{id}/comments")
+    public ApiResponse<String> addComment(
+            @PathVariable Long id,
+            @RequestBody TaskCommentRequest req,
+            Principal p) {
+        return ResponseUtils.createSuccessResponse(
+                addTaskCommentUseCase.execute(id, req.getComment(), p.getName()),
+                new TypeReference<>() {}
+        );
+    }
 
-        return ResponseUtils.createSuccessResponse(res, new TypeReference<>() {});
+    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks/{id}/change-request
+    // Used by: "Request Change" button in TaskDetail (IN_PROGRESS banner)
+    // ──────────────────────────────────────────────────────────
+    @PostMapping("/{id}/change-request")
+    public ApiResponse<String> sendChangeRequest(
+            @PathVariable Long id,
+            @RequestBody TaskChangeRequestDto req) {
+        return ResponseUtils.createSuccessResponse(
+                sendChangeRequestUseCase.execute(id, req),
+                new TypeReference<>() {}
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks/{id}/change-request/approve
+    // Used by: "Approve Change" button in TaskDetail (CHANGE_REQUESTED banner)
+    // ──────────────────────────────────────────────────────────
+    @PostMapping("/{id}/change-request/approve")
+    public ApiResponse<String> approveChangeRequest(@PathVariable Long id) {
+        return ResponseUtils.createSuccessResponse(
+                approveChangeRequestUseCase.execute(id),
+                new TypeReference<>() {}
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks/{id}/change-request/reject
+    // Used by: "Reject Change" button in TaskDetail (CHANGE_REQUESTED banner)
+    // ──────────────────────────────────────────────────────────
+    @PostMapping("/{id}/change-request/reject")
+    public ApiResponse<String> rejectChangeRequest(@PathVariable Long id) {
+        return ResponseUtils.createSuccessResponse(
+                rejectChangeRequestUseCase.execute(id),
+                new TypeReference<>() {}
+        );
     }
 }

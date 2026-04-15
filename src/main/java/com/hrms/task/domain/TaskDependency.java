@@ -7,6 +7,7 @@ import lombok.Setter;
 @Entity
 @Getter
 @Setter
+@Table(name = "task_dependencies")
 public class TaskDependency {
 
     @Id
@@ -14,8 +15,10 @@ public class TaskDependency {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "task_id")
     private Task task;
 
     @ManyToOne
+    @JoinColumn(name = "depends_on_task_id")
     private Task dependsOnTask;
 }

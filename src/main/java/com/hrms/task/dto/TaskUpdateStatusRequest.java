@@ -7,4 +7,5 @@ public class TaskUpdateStatusRequest {
 
     private Long taskId;
     private String status;
+    private Integer progress;
 }

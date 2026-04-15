@@ -1,6 +1,7 @@
 package com.hrms.task.domain;
 
-import com.hrms.employee.domain.Employee;
+
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,8 +11,8 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@Table(name = "task_escalations")
-public class TaskEscalation {
+@Table(name = "task_change_requests")
+public class TaskChangeRequest {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,13 +22,13 @@ public class TaskEscalation {
     @JoinColumn(name = "task_id")
     private Task task;
 
-    private Integer level;
+    @Column(length = 1000)
+    private String reason;
 
-    @ManyToOne
-    @JoinColumn(name = "escalated_to_id")
-    private Employee escalatedTo;
+    private LocalDateTime requestedDeadline;
 
-    private LocalDateTime triggeredAt;
+    private String status; // PENDING, APPROVED, REJECTED
 
-    private String status; // PENDING, RESOLVED
+    private LocalDateTime createdAt;
+    private LocalDateTime resolvedAt;
 }
