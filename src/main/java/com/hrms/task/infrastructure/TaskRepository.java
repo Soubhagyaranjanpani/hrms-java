@@ -2,6 +2,7 @@ package com.hrms.task.infrastructure;
 
 import com.hrms.employee.domain.Employee;
 import com.hrms.task.domain.Task;
+import com.hrms.task.domain.TaskStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -30,4 +31,15 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             "AND t.status NOT IN ('COMPLETED','REJECTED') " +
             "AND t.isDeleted = false")
     List<Task> findOverdueTasks();
+
+    Long countByAssignedToIdAndIsDeletedFalse(Long employeeId);
+
+    Long countByAssignedToIdAndStatusAndIsDeletedFalse(Long employeeId, TaskStatus status);
+
+    Long countByAssignedToIdAndDueDateBeforeAndStatusNotAndIsDeletedFalse(
+            Long employeeId,
+            java.time.LocalDateTime now,
+            TaskStatus status
+    );
+
 }

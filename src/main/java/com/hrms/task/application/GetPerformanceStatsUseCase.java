@@ -1,8 +1,5 @@
 package com.hrms.task.application;
 
-
-
-
 import com.hrms.task.dto.PerformanceStatsResponse;
 import com.hrms.task.infrastructure.PerformanceReviewRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,24 +15,37 @@ public class GetPerformanceStatsUseCase {
 
         PerformanceStatsResponse stats = new PerformanceStatsResponse();
 
-        // avg rating — stat card 1
+        // 1️⃣ Average Rating
         Double avg = repo.findAvgRating();
         stats.setAvgRating(avg != null ? Math.round(avg * 10.0) / 10.0 : 0.0);
 
-        // total completed reviews — stat card 2
+        // 2️⃣ Total Completed Reviews
         stats.setCompletedReviews((int) repo.findByIsDeletedFalse().size());
 
-        // goal achievement % — stat card 3
+        // 3️⃣ Goal Achievement %
         Object[] goalTotals = repo.sumGoals();
-        if (goalTotals != null && goalTotals[0] != null && goalTotals[1] != null) {
-            long achieved = ((Number) goalTotals[0]).longValue();
-            long total    = ((Number) goalTotals[1]).longValue();
-            stats.setGoalAchievementPct(total > 0 ? (int) ((achieved * 100) / total) : 0);
+
+        if (goalTotals != null && goalTotals.length >= 2) {
+
+            long achieved = goalTotals[0] != null
+                    ? ((Number) goalTotals[0]).longValue()
+                    : 0;
+
+            long total = goalTotals[1] != null
+                    ? ((Number) goalTotals[1]).longValue()
+                    : 0;
+
+            if (total > 0) {
+                stats.setGoalAchievementPct((int) ((achieved * 100) / total));
+            } else {
+                stats.setGoalAchievementPct(0);
+            }
+
         } else {
             stats.setGoalAchievementPct(0);
         }
 
-        // outstanding count (rating >= 4.5) — stat card 4
+        // 4️⃣ Outstanding Count (rating >= 4.5)
         Integer outstanding = repo.countByRatingGreaterThanEqual(4.5);
         stats.setOutstandingCount(outstanding != null ? outstanding : 0);
 

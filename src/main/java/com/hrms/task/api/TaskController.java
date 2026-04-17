@@ -6,6 +6,7 @@ import com.hrms.common.utils.ResponseUtils;
 import com.hrms.task.application.*;
 import com.hrms.task.dto.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -25,6 +26,8 @@ public class TaskController {
     private final SendChangeRequestUseCase sendChangeRequestUseCase;
     private final ApproveChangeRequestUseCase approveChangeRequestUseCase;
     private final RejectChangeRequestUseCase rejectChangeRequestUseCase;
+    private final UpdateTaskUseCase updateTaskUseCase;
+    private final GetEmployeeTaskStatsUseCase getEmployeeTaskStatsUseCase;
 
     // ──────────────────────────────────────────────────────────
     // GET /api/tasks
@@ -163,4 +166,43 @@ public class TaskController {
                 new TypeReference<>() {}
         );
     }
+
+    @PutMapping("/{id}")
+    public ApiResponse<TaskResponse> updateTask(
+            @PathVariable Long id,
+            @RequestBody UpdateTaskRequest req) {
+        return ResponseUtils.createSuccessResponse(
+                updateTaskUseCase.execute(id, req),
+                new TypeReference<>() {}
+        );
+    }
+
+    /**
+     * PUT /api/tasks/{parentId}/subtasks/{subtaskId}
+     * Edit a subtask — opened from the subtask row edit button in TaskDetail
+     * Body: same shape as UpdateTaskRequest
+     */
+    @PutMapping("/{parentId}/subtasks/{subtaskId}")
+    public ApiResponse<TaskResponse> updateSubtask(
+            @PathVariable Long parentId,
+            @PathVariable Long subtaskId,
+            @RequestBody UpdateTaskRequest req) {
+        // parentId is available for validation if needed
+        return ResponseUtils.createSuccessResponse(
+                updateTaskUseCase.execute(subtaskId, req),
+                new TypeReference<>() {}
+        );
+    }
+
+
+    @GetMapping("/stats/{employeeId}")
+    public ResponseEntity<EmployeeTaskStatsResponse> getStats(
+            @PathVariable Long employeeId) {
+
+        return ResponseEntity.ok(getEmployeeTaskStatsUseCase.execute(employeeId));
+    }
+
+
+
 }
+
