@@ -24,7 +24,7 @@ public class PdfPayslipGenerator {
 
     // Other colors
     private static final Color COLOR_GREEN = new Color(5, 150, 105);       // #059669
-    private static final Color COLOR_RED = new Color(220, 38, 38);         // #dc2626
+    private static final Color COLOR_RED = new Color(168, 140, 9);         // #dc2626
     private static final Color COLOR_AMBER = new Color(217, 119, 6);       // #d97706
     private static final Color COLOR_DARK = new Color(17, 24, 39);         // #111827
     private static final Color COLOR_GRAY = new Color(107, 114, 128);      // #6b7280

@@ -1,16 +1,19 @@
 package com.hrms.payroll.application;
 
+import com.hrms.payroll.domain.PayrollRecord;
 import com.hrms.payroll.dto.PayrollDashboardStats;
 import com.hrms.payroll.infrastructure.PayrollRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GetPayrollDashboardStatsUseCase {
@@ -22,94 +25,159 @@ public class GetPayrollDashboardStatsUseCase {
             yearMonth = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
         }
 
+        log.info("Fetching dashboard stats for month: {}", yearMonth);
+
         PayrollDashboardStats s = new PayrollDashboardStats();
 
-        // ── current month aggregates ──
-        try {
-            Object[] agg = repo.aggregateForMonth(yearMonth);
+        // Fetch all records for the month - this is reliable
+        List<PayrollRecord> records = repo.findByYearMonthAndIsDeletedFalse(yearMonth);
 
-            if (agg != null && agg.length >= 11) {
-                s.setTotalNetPayroll(toDouble(agg[0]));
-                s.setTotalGrossPayroll(toDouble(agg[1]));
-                s.setTotalDeductions(toDouble(agg[2]));
-                s.setTotalBasic(toDouble(agg[3]));
-                s.setTotalHra(toDouble(agg[4]));
-                s.setTotalPF(toDouble(agg[5]));
-                s.setTotalTax(toDouble(agg[6]));
-
-                long total = toLong(agg[7]);
-                long processed = toLong(agg[8]);
-                long pending = toLong(agg[9]);
-                long draft = toLong(agg[10]);
-
-                s.setTotalEmployees((int) total);
-                s.setProcessedCount((int) processed);
-                s.setPendingCount((int) pending);
-                s.setDraftCount((int) draft);
-
-                double gross = s.getTotalGrossPayroll() != null ? s.getTotalGrossPayroll() : 0.0;
-                double basic = s.getTotalBasic() != null ? s.getTotalBasic() : 0.0;
-                s.setTotalAllowances(gross - basic);
-
-                s.setAvgNetSalary(total > 0 ? s.getTotalNetPayroll() / total : 0.0);
-            } else {
-                setDefaultValues(s);
-            }
-        } catch (Exception e) {
+        if (records.isEmpty()) {
             setDefaultValues(s);
-        }
-
-        // ── 6-month trend ──
-        try {
-            String from6 = sixMonthsBack(yearMonth);
-            List<Object[]> trend = repo.monthlyTrend(from6);
-            List<PayrollDashboardStats.MonthTrend> trendList = new ArrayList<>();
-
-            if (trend != null) {
-                for (Object[] row : trend) {
-                    if (row != null && row.length >= 5) {
-                        PayrollDashboardStats.MonthTrend t = new PayrollDashboardStats.MonthTrend();
-                        t.setYearMonth(toString(row[0]));
-                        t.setLabel(toString(row[1]));
-                        t.setNetPayroll(toDouble(row[2]));
-                        t.setGrossPayroll(toDouble(row[3]));
-                        t.setHeadCount((int) toLong(row[4]));
-                        trendList.add(t);
-                    }
-                }
-            }
-            s.setTrend(trendList);
-        } catch (Exception e) {
-            s.setTrend(new ArrayList<>());
-        }
-
-        // ── department breakdown ──
-        try {
-            List<Object[]> depts = repo.deptBreakdown(yearMonth);
-            List<PayrollDashboardStats.DeptBreakdown> deptList = new ArrayList<>();
-
-            if (depts != null) {
-                for (Object[] row : depts) {
-                    if (row != null && row.length >= 3) {
-                        PayrollDashboardStats.DeptBreakdown db = new PayrollDashboardStats.DeptBreakdown();
-                        db.setDepartment(toString(row[0]));
-                        db.setTotalNet(toDouble(row[1]));
-                        int count = (int) toLong(row[2]);
-                        db.setCount(count);
-                        db.setAvgNet(count > 0 ? db.getTotalNet() / count : 0.0);
-                        deptList.add(db);
-                    }
-                }
-            }
-            s.setDeptBreakdown(deptList);
-        } catch (Exception e) {
+            s.setAiSummary("No payroll data found for " + toLabel(yearMonth) + ". Generate records to get started.");
+            s.setTrend(getMonthlyTrend(yearMonth));
             s.setDeptBreakdown(new ArrayList<>());
+            return s;
         }
 
-        // ── AI summary ──
+        // Calculate all aggregates from records
+        calculateAggregates(s, records, yearMonth);
+
+        // Get trend data
+        s.setTrend(getMonthlyTrend(yearMonth));
+
+        // Get department breakdown
+        s.setDeptBreakdown(calculateDeptBreakdown(records));
+
+        // Generate AI summary
         s.setAiSummary(buildAiSummary(s, yearMonth));
 
         return s;
+    }
+
+    private void calculateAggregates(PayrollDashboardStats s, List<PayrollRecord> records, String yearMonth) {
+        // Basic counts
+        long totalEmployees = records.size();
+        long processedCount = records.stream().filter(r -> "PROCESSED".equals(r.getStatus())).count();
+        long pendingCount = records.stream().filter(r -> "PENDING".equals(r.getStatus())).count();
+        long draftCount = records.stream().filter(r -> "DRAFT".equals(r.getStatus())).count();
+
+        s.setTotalEmployees((int) totalEmployees);
+        s.setProcessedCount((int) processedCount);
+        s.setPendingCount((int) pendingCount);
+        s.setDraftCount((int) draftCount);
+
+        // Calculate totals (only from PROCESSED records)
+        List<PayrollRecord> processedRecords = records.stream()
+                .filter(r -> "PROCESSED".equals(r.getStatus()))
+                .collect(Collectors.toList());
+
+        double totalNetPayroll = processedRecords.stream().mapToDouble(r -> r.getNetSalary() != null ? r.getNetSalary() : 0).sum();
+        double totalGrossPayroll = processedRecords.stream().mapToDouble(r -> r.getGrossEarnings() != null ? r.getGrossEarnings() : 0).sum();
+        double totalBasic = processedRecords.stream().mapToDouble(r -> r.getBasicSalary() != null ? r.getBasicSalary() : 0).sum();
+        double totalHra = processedRecords.stream().mapToDouble(r -> r.getHra() != null ? r.getHra() : 0).sum();
+        double totalDeductions = processedRecords.stream().mapToDouble(r -> r.getTotalDeductions() != null ? r.getTotalDeductions() : 0).sum();
+        double totalPF = processedRecords.stream().mapToDouble(r -> r.getProvidentFund() != null ? r.getProvidentFund() : 0).sum();
+        double totalTax = processedRecords.stream().mapToDouble(r ->
+                (r.getProfessionalTax() != null ? r.getProfessionalTax() : 0) +
+                        (r.getIncomeTax() != null ? r.getIncomeTax() : 0)).sum();
+
+        s.setTotalNetPayroll(totalNetPayroll);
+        s.setTotalGrossPayroll(totalGrossPayroll);
+        s.setTotalBasic(totalBasic);
+        s.setTotalHra(totalHra);
+        s.setTotalDeductions(totalDeductions);
+        s.setTotalPF(totalPF);
+        s.setTotalTax(totalTax);
+        s.setTotalAllowances(totalGrossPayroll - totalBasic);
+        s.setAvgNetSalary(processedCount > 0 ? totalNetPayroll / processedCount : 0.0);
+
+        log.info("Calculated aggregates - Total: {}, Processed: {}, Net: ₹{}, Basic: ₹{}, HRA: ₹{}",
+                totalEmployees, processedCount, totalNetPayroll, totalBasic, totalHra);
+    }
+
+    private List<PayrollDashboardStats.MonthTrend> getMonthlyTrend(String yearMonth) {
+        List<PayrollDashboardStats.MonthTrend> trendList = new ArrayList<>();
+
+        try {
+            String fromMonth = sixMonthsBack(yearMonth);
+
+            // Get last 6 months of data
+            for (int i = 5; i >= 0; i--) {
+                LocalDate date = LocalDate.parse(yearMonth + "-01").minusMonths(i);
+                String ym = date.format(DateTimeFormatter.ofPattern("yyyy-MM"));
+
+                List<PayrollRecord> monthRecords = repo.findByYearMonthAndIsDeletedFalse(ym);
+
+                PayrollDashboardStats.MonthTrend trend = new PayrollDashboardStats.MonthTrend();
+                trend.setYearMonth(ym);
+                trend.setLabel(toLabel(ym));
+
+                if (!monthRecords.isEmpty()) {
+                    List<PayrollRecord> processed = monthRecords.stream()
+                            .filter(r -> "PROCESSED".equals(r.getStatus()))
+                            .collect(Collectors.toList());
+
+                    double netPayroll = processed.stream().mapToDouble(r -> r.getNetSalary() != null ? r.getNetSalary() : 0).sum();
+                    double grossPayroll = processed.stream().mapToDouble(r -> r.getGrossEarnings() != null ? r.getGrossEarnings() : 0).sum();
+
+                    trend.setNetPayroll(netPayroll);
+                    trend.setGrossPayroll(grossPayroll);
+                    trend.setHeadCount(monthRecords.size());
+                } else {
+                    trend.setNetPayroll(0.0);
+                    trend.setGrossPayroll(0.0);
+                    trend.setHeadCount(0);
+                }
+
+                trendList.add(trend);
+            }
+        } catch (Exception e) {
+            log.error("Error generating monthly trend", e);
+        }
+
+        return trendList;
+    }
+
+    private List<PayrollDashboardStats.DeptBreakdown> calculateDeptBreakdown(List<PayrollRecord> records) {
+        List<PayrollDashboardStats.DeptBreakdown> deptList = new ArrayList<>();
+
+        try {
+            // Group by department (handle null departments)
+            Map<String, List<PayrollRecord>> deptGroups = records.stream()
+                    .filter(r -> "PROCESSED".equals(r.getStatus()))
+                    .collect(Collectors.groupingBy(r -> {
+                        if (r.getEmployee() != null && r.getEmployee().getDepartment() != null) {
+                            return r.getEmployee().getDepartment().getName();
+                        }
+                        return "Unassigned";
+                    }));
+
+            for (Map.Entry<String, List<PayrollRecord>> entry : deptGroups.entrySet()) {
+                PayrollDashboardStats.DeptBreakdown db = new PayrollDashboardStats.DeptBreakdown();
+                db.setDepartment(entry.getKey());
+
+                List<PayrollRecord> deptRecords = entry.getValue();
+                double totalNet = deptRecords.stream().mapToDouble(r -> r.getNetSalary() != null ? r.getNetSalary() : 0).sum();
+                int count = deptRecords.size();
+
+                db.setTotalNet(totalNet);
+                db.setCount(count);
+                db.setAvgNet(count > 0 ? totalNet / count : 0.0);
+
+                deptList.add(db);
+            }
+
+            // Sort by total net descending
+            deptList.sort((a, b) -> Double.compare(b.getTotalNet(), a.getTotalNet()));
+
+            log.info("Department breakdown calculated: {} departments", deptList.size());
+
+        } catch (Exception e) {
+            log.error("Error calculating department breakdown", e);
+        }
+
+        return deptList;
     }
 
     private void setDefaultValues(PayrollDashboardStats s) {
@@ -132,16 +200,25 @@ public class GetPayrollDashboardStatsUseCase {
         double net = s.getTotalNetPayroll() != null ? s.getTotalNetPayroll() : 0.0;
         int emp = s.getTotalEmployees() != null ? s.getTotalEmployees() : 0;
         int pro = s.getProcessedCount() != null ? s.getProcessedCount() : 0;
-        int pen = s.getPendingCount() != null ? s.getPendingCount() : 0;
+        int draft = s.getDraftCount() != null ? s.getDraftCount() : 0;
 
         if (emp == 0) {
             return "No payroll data found for " + toLabel(ym) + ". Generate records to get started.";
         }
 
         String label = toLabel(ym);
+
+        if (pro == 0 && draft > 0) {
+            return String.format(
+                    "%s: %d employees in draft. Process payroll to calculate salaries.",
+                    label, draft
+            );
+        }
+
         return String.format(
-                "Total payroll outflow for %s is ₹%.1fL across %d employees. %d records processed, %d pending approval.",
-                label, net / 100000, emp, pro, pen
+                "%s: ₹%.2fL net payroll across %d employees (%d processed, %d draft). Avg net salary ₹%.0f.",
+                label, net / 100000, emp, pro, draft,
+                s.getAvgNetSalary() != null ? s.getAvgNetSalary() : 0.0
         );
     }
 
@@ -161,32 +238,5 @@ public class GetPayrollDashboardStatsUseCase {
         } catch (Exception e) {
             return ym;
         }
-    }
-
-    // Safe conversion utilities
-    private double toDouble(Object obj) {
-        if (obj == null) return 0.0;
-        if (obj instanceof Number) return ((Number) obj).doubleValue();
-        if (obj instanceof BigDecimal) return ((BigDecimal) obj).doubleValue();
-        try {
-            return Double.parseDouble(obj.toString());
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
-    }
-
-    private long toLong(Object obj) {
-        if (obj == null) return 0L;
-        if (obj instanceof Number) return ((Number) obj).longValue();
-        if (obj instanceof BigDecimal) return ((BigDecimal) obj).longValue();
-        try {
-            return Long.parseLong(obj.toString());
-        } catch (NumberFormatException e) {
-            return 0L;
-        }
-    }
-
-    private String toString(Object obj) {
-        return obj != null ? obj.toString() : "";
     }
 }

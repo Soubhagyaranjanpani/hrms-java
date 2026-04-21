@@ -61,4 +61,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             Pageable pageable
     );
     Optional<Employee> findByIdAndIsDeletedFalse(Long id);
+
+    Optional<Employee> findByEmailAndIsDeletedFalse(String email);
+
+
+
 }

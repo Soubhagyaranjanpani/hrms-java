@@ -29,4 +29,26 @@ public interface PerformanceReviewRepository extends JpaRepository<PerformanceRe
     // total achieved vs total goals across all reviews
     @Query("SELECT SUM(p.achievedGoals), SUM(p.totalGoals) FROM PerformanceReview p WHERE p.isDeleted = false")
     Object[] sumGoals();
+
+    @Query("""
+        SELECT
+            AVG(p.rating),
+            SUM(CASE WHEN p.status IN ('Outstanding','Excellent','Great','Good','Satisfactory') THEN 1 ELSE 0 END),
+            COUNT(p),
+            SUM(CASE WHEN p.status = 'Outstanding' THEN 1 ELSE 0 END)
+        FROM PerformanceReview p
+    """)
+    Object[] aggregateStats();
+
+    // Top 3 performers
+    List<PerformanceReview> findTop3ByOrderByRatingDesc();
+
+    // Rating distribution (label, count)
+    @Query("""
+        SELECT p.status, COUNT(p)
+        FROM PerformanceReview p
+        GROUP BY p.status
+        ORDER BY AVG(p.rating) DESC
+    """)
+    List<Object[]> ratingDistribution();
 }
