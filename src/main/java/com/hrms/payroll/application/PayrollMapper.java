@@ -1,6 +1,5 @@
+// File: com/hrms/payroll/application/PayrollMapper.java
 package com.hrms.payroll.application;
-
-
 
 import com.hrms.payroll.domain.PayrollRecord;
 import com.hrms.payroll.dto.PayrollRecordResponse;
@@ -28,6 +27,7 @@ public class PayrollMapper {
         r.setYearMonth(p.getYearMonth());
         r.setPayrollMonth(p.getPayrollMonth());
 
+        // Earnings
         r.setBasicSalary(p.getBasicSalary());
         r.setHra(p.getHra());
         r.setTravelAllow(p.getTravelAllow());
@@ -36,6 +36,7 @@ public class PayrollMapper {
         r.setOtherEarnings(p.getOtherEarnings());
         r.setGrossEarnings(p.getGrossEarnings());
 
+        // Deductions
         r.setProvidentFund(p.getProvidentFund());
         r.setProfessionalTax(p.getProfessionalTax());
         r.setIncomeTax(p.getIncomeTax());
@@ -53,6 +54,33 @@ public class PayrollMapper {
         r.setRemarks(p.getRemarks());
         r.setAiInsight(p.getAiInsight());
         r.setProcessedBy(p.getProcessedBy());
+
+        // Employee Info (from Employee entity)
+        r.setBankAccount(p.getEmployee().getBankAccount());
+        r.setUan(p.getEmployee().getUan());
+        r.setPan(p.getEmployee().getPan());
+        r.setDateOfJoining(p.getEmployee().getJoiningDate());
+
+        // Additional Earnings
+        r.setOvertimePayout(p.getOvertimePayout());
+        r.setArrears(p.getArrears());
+        r.setNoticePeriodPay(p.getNoticePeriodPay());
+        r.setLeaveTravelAllowance(p.getLeaveTravelAllowance());
+        r.setTelephoneAllowance(p.getTelephoneAllowance());
+        r.setBonusAmount(p.getBonusAmount());
+        r.setDearnessAllowance(p.getDearnessAllowance());
+        r.setGradePay(p.getGradePay());
+        r.setLeaveEncashment(p.getLeaveEncashment());
+
+        // Employer Contributions
+        r.setEmployerPF(p.getEmployerPF());
+        r.setNpsEmployee(p.getNpsEmployee());
+        r.setNpsEmployer(p.getNpsEmployer());
+        r.setEsiEmployee(p.getEsiEmployee());
+        r.setEsiEmployer(p.getEsiEmployer());
+        r.setGratuityAccrual(p.getGratuityAccrual());
+        r.setHealthEduCess(p.getHealthEduCess());
+
         return r;
     }
 

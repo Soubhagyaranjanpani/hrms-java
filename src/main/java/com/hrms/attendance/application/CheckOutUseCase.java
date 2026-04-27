@@ -57,7 +57,7 @@ public class CheckOutUseCase {
         attendance.setCheckOut(LocalTime.now());
 
         // 🔹 STEP 6: Fetch active policy
-        AttendancePolicy policy = policyRepo.findByIsActiveTrue().orElse(null);
+        AttendancePolicy policy = (AttendancePolicy) policyRepo.findByIsActiveTrue();
 
         if (policy == null) {
             return new ApiResponse<>("FAILURE", "Attendance policy not configured", null);

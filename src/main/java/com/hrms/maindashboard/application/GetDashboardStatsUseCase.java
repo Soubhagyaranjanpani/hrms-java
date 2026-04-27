@@ -2,7 +2,9 @@ package com.hrms.maindashboard.application;
 
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
+import com.hrms.maindashboard.dto.DashboardData;
 import com.hrms.maindashboard.dto.DashboardStatsResponse;
+import com.hrms.maindashboard.dto.DeptData;
 import com.hrms.payroll.domain.PayrollRecord;
 import com.hrms.payroll.infrastructure.PayrollRepository;
 import com.hrms.task.domain.PerformanceReview;
@@ -31,6 +33,7 @@ public class GetDashboardStatsUseCase {
     private final TaskRepository             taskRepo;
     private final PayrollRepository          payrollRepo;
     private final PerformanceReviewRepository perfRepo;
+    private final AIService aiService;
 
     public DashboardStatsResponse execute(String principalEmail) {
 
@@ -171,8 +174,67 @@ public class GetDashboardStatsUseCase {
         // ── REAL-TIME Activity feed from database ─────────────────────────
         r.setRecentActivity(buildRealTimeActivity());
 
+        // ── AI-POWERED Insight (replaces buildSummary) ────────────────────
+        try {
+            // In execute() method, after calculatePerformanceStats(r):
+
+// Build AI data
+            DashboardData aiData = new DashboardData();
+            aiData.setTotalEmployees(r.getTotalEmployees() != null ? r.getTotalEmployees() : 0);
+            aiData.setNewHiresThisMonth(r.getNewHiresThisMonth() != null ? r.getNewHiresThisMonth() : 0);
+            aiData.setEmployeeGrowthPct(r.getEmployeeGrowthPct() != null ? r.getEmployeeGrowthPct() : 0.0);
+            aiData.setTotalTasks(r.getTotalTasks() != null ? r.getTotalTasks() : 0);
+            aiData.setInProgressTasks(r.getInProgressTasks() != null ? r.getInProgressTasks() : 0);
+            aiData.setInReviewTasks(r.getInReviewTasks() != null ? r.getInReviewTasks() : 0); // ← ADD THIS
+            aiData.setOverdueTasks(r.getOverdueTasks() != null ? r.getOverdueTasks() : 0);
+            aiData.setCompletedTasks(r.getCompletedTasksThisMonth() != null ? r.getCompletedTasksThisMonth() : 0);
+            aiData.setTaskCompletionRate(r.getTaskCompletionRate() != null ? r.getTaskCompletionRate() : 0.0);
+            aiData.setTotalPayrollThisMonth(r.getTotalPayrollThisMonth() != null ? r.getTotalPayrollThisMonth() : 0.0);
+            aiData.setPendingPayrollCount(r.getPendingPayrollCount() != null ? r.getPendingPayrollCount() : 0);
+            aiData.setProcessedPayrollCount(r.getProcessedPayrollCount() != null ? r.getProcessedPayrollCount() : 0);
+            aiData.setAvgSalary(r.getAvgSalary() != null ? r.getAvgSalary() : 0.0);
+            aiData.setAvgPerformanceRating(r.getAvgPerformanceRating() != null ? r.getAvgPerformanceRating() : 0.0);
+            aiData.setOutstandingEmployees(r.getOutstandingEmployees() != null ? r.getOutstandingEmployees() : 0);
+            aiData.setPerformanceReviewsDone(r.getPerformanceReviewsDone() != null ? r.getPerformanceReviewsDone() : 0);
+            aiData.setDepts(convertDepts(r.getDeptHeadcounts()));
+
+// Generate AI insight
+            String aiInsight = aiService.generateDashboardInsights(aiData);
+            r.setAiSummary(aiInsight);
+            log.info("AI Insight generated: {}", aiInsight);
+        } catch (Exception e) {
+            log.error("AI Service failed, using fallback summary: {}", e.getMessage());
+//            r.setAiSummary(buildFallbackSummary(r));  // ← Fallback to simple summary
+        }
+
         return r;
     }
+
+    private List<DeptData> convertDepts(List<DashboardStatsResponse.DeptHeadcount> depts) {
+        if (depts == null || depts.isEmpty()) return new ArrayList<>();
+        return depts.stream()
+                .map(d -> DeptData.builder()
+                        .department(d.getDepartment() != null ? d.getDepartment() : "Unknown")
+                        .count(d.getCount() != null ? d.getCount() : 0)
+                        .pct(d.getPct() != null ? d.getPct() : 0.0)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /*
+     * Fallback summary when AI service fails
+     */
+//    private String buildFallbackSummary(DashboardStatsResponse r) {
+//        int emp = r.getTotalEmployees() != null ? r.getTotalEmployees() : 0;
+//        int tasks = r.getTotalTasks() != null ? r.getTotalTasks() : 0;
+//        double payroll = r.getTotalPayrollThisMonth() != null ? r.getTotalPayrollThisMonth() : 0;
+//
+//        if (emp == 0) return "Welcome! Start by adding employees to see insights.";
+//
+//        return String.format("📊 %d employees, %d active tasks, ₹%.2fL payroll this month.",
+//                emp, tasks, payroll / 100000);
+//    }
+
 
     /**
      * Calculate payroll stats directly from PayrollRecord entities

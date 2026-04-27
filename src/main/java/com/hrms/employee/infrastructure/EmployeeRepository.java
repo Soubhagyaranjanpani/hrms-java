@@ -65,5 +65,5 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Optional<Employee> findByEmailAndIsDeletedFalse(String email);
 
 
-
+    List<Employee> findByGradeIdAndIsActiveTrueAndIsDeletedFalse(Long gradeId);
 }

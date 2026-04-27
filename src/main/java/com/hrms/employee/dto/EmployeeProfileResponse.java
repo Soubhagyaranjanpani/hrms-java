@@ -19,4 +19,9 @@ public class EmployeeProfileResponse {
     private String address;
     private String profilePicture;
     private LocalDateTime lastLogin;
+    // ADD these fields to your existing EmployeeProfileResponse.java
+    private Long gradeId;
+    private String gradeName;
+    private String gradeCode;
+    private Double gradePay;
 }

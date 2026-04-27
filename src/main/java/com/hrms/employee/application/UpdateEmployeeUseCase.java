@@ -3,7 +3,9 @@ package com.hrms.employee.application;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.utils.ResponseUtils;
 import com.hrms.employee.domain.Employee;
+import com.hrms.employee.domain.EmployeeGrade;
 import com.hrms.employee.dto.EmployeeUpdateReq;
+import com.hrms.employee.infrastructure.EmployeeGradeRepository;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import com.hrms.master.infrastructure.*;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ public class UpdateEmployeeUseCase {
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
     private final BranchRepository branchRepository;
+    private final EmployeeGradeRepository gradeRepo;
 
     public ApiResponse<String> execute(Long id, EmployeeUpdateReq req) {
 
@@ -34,6 +37,14 @@ public class UpdateEmployeeUseCase {
         if (req.getProfilePicture() != null) emp.setProfilePicture(req.getProfilePicture());
         if (req.getJoiningDate() != null) emp.setJoiningDate(req.getJoiningDate());
         if (req.getIsActive() != null) emp.setIsActive(req.getIsActive());
+        // In the execute method, add:
+        if (req.getGradeId() != null) {
+            EmployeeGrade grade = gradeRepo.findById(req.getGradeId())
+                    .orElseThrow(() -> new RuntimeException("Grade not found"));
+            emp.setGrade(grade);
+        } else {
+            emp.setGrade(null); // Allow clearing grade
+        }
 
         if (req.getRoleId() != null) {
             emp.setRole(roleRepository.findById(req.getRoleId()).orElse(null));

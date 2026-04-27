@@ -18,6 +18,6 @@ public class EmployeeUpdateReq {
     private Long departmentId;
     private Long branchId;
     private Long managerId;
-
+    private Long gradeId;
     private Boolean isActive;
 }

@@ -47,6 +47,21 @@ public class SalaryStructure {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+
+
+    private Double dearnessAllowance = 0.0;
+    private Double gradePay = 0.0;
+    private Double bonusAmount = 0.0;
+    private Double leaveEncashment = 0.0;
+    private Double employerPF = 0.0;
+    private Double npsEmployee = 0.0;
+    private Double npsEmployer = 0.0;
+    private Double esiEmployee = 0.0;
+    private Double esiEmployer = 0.0;
+    private Double gratuityAccrual = 0.0;
+    private Double healthEduCess = 0.0;
+    private String state;
+
     @PrePersist  public void prePersist()  { this.createdAt = LocalDateTime.now(); }
     @PreUpdate   public void preUpdate()   { this.updatedAt = LocalDateTime.now(); }
 }

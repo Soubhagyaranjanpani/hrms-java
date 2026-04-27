@@ -6,7 +6,9 @@ import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.DefaultResponse;
 import com.hrms.common.utils.ResponseUtils;
 import com.hrms.employee.domain.Employee;
+import com.hrms.employee.domain.EmployeeGrade;
 import com.hrms.employee.dto.EmployeeCreationReq;
+import com.hrms.employee.infrastructure.EmployeeGradeRepository;
 import com.hrms.employee.infrastructure.EmployeeRepository;
 import com.hrms.leave.application.InitializeLeaveBalanceUseCase;
 import com.hrms.master.domain.Branch;
@@ -33,6 +35,7 @@ public class CreateEmployeeUseCase {
     private final InitializeLeaveBalanceUseCase initializeLeaveBalanceUseCase;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
+    private final EmployeeGradeRepository gradeRepo;
 
     public ApiResponse<DefaultResponse> execute(EmployeeCreationReq request) {
 
@@ -89,6 +92,13 @@ public class CreateEmployeeUseCase {
         emp.setAddress(request.getAddress());
         emp.setProfilePicture(request.getProfilePicture());
         emp.setJoiningDate(request.getJoiningDate());
+        // In the execute method, add:
+        // In the execute method, add:
+        if (request.getGradeId() != null) {
+            EmployeeGrade grade = gradeRepo.findById(request.getGradeId())
+                    .orElseThrow(() -> new RuntimeException("Grade not found"));
+            emp.setGrade(grade);
+        }
 
         emp.setRole(role);
         emp.setDepartment(department);

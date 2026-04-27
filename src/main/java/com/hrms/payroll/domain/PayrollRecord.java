@@ -77,6 +77,57 @@ public class PayrollRecord {
 
     private String processedBy;
 
+    // ADD these fields to your EXISTING PayrollRecord.java
+// DON'T remove existing fields, just ADD these:
+
+    // ── Additional Allowances (NEW) ──
+    private Double dearnessAllowance = 0.0;
+    private Double gradePay = 0.0;
+    private Double bonusAmount = 0.0;
+    private Double leaveEncashment = 0.0;
+
+    // ── Employer Contributions (NEW) ──
+    private Double employerPF = 0.0;
+    private Double npsEmployee = 0.0;
+    private Double npsEmployer = 0.0;
+    private Double esiEmployee = 0.0;
+    private Double esiEmployer = 0.0;
+    private Double gratuityAccrual = 0.0;
+
+    // ── Additional Deductions (NEW) ──
+    private Double healthEduCess = 0.0;
+
+
+
+    // Additional Earnings
+    private Double overtimePayout = 0.0;
+    private Double arrears = 0.0;
+    private Double noticePeriodPay = 0.0;
+    private Double leaveTravelAllowance = 0.0;
+    private Double telephoneAllowance = 0.0;
+
+    // UPDATE the compute() method:
+    public void compute() {
+        // Earnings
+        this.grossEarnings = safe(basicSalary) + safe(hra) + safe(travelAllow)
+                + safe(medicalAllow) + safe(specialAllow) + safe(otherEarnings)
+                + safe(dearnessAllowance) + safe(gradePay) + safe(bonusAmount)
+                + safe(leaveEncashment);
+
+        // Deductions (employee share only)
+        this.totalDeductions = safe(providentFund) + safe(professionalTax)
+                + safe(incomeTax) + safe(healthEduCess)
+                + safe(loanDeduction) + safe(otherDeductions)
+                + safe(npsEmployee) + safe(esiEmployee);
+
+        this.netSalary = this.grossEarnings - this.totalDeductions;
+
+        if (workingDays != null && workingDays > 0 && lopDays != null && lopDays > 0) {
+            double perDay = this.grossEarnings / workingDays;
+            this.netSalary = this.netSalary - (perDay * lopDays);
+        }
+    }
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
@@ -89,18 +140,18 @@ public class PayrollRecord {
         compute();
     }
 
-    public void compute() {
-        this.grossEarnings = safe(basicSalary) + safe(hra) + safe(travelAllow)
-                + safe(medicalAllow) + safe(specialAllow) + safe(otherEarnings);
-        this.totalDeductions = safe(providentFund) + safe(professionalTax)
-                + safe(incomeTax) + safe(loanDeduction) + safe(otherDeductions);
-        this.netSalary = this.grossEarnings - this.totalDeductions;
-        // LOP adjustment
-        if (workingDays != null && workingDays > 0 && lopDays != null && lopDays > 0) {
-            double perDay = this.grossEarnings / workingDays;
-            this.netSalary = this.netSalary - (perDay * lopDays);
-        }
-    }
+//    public void compute() {
+//        this.grossEarnings = safe(basicSalary) + safe(hra) + safe(travelAllow)
+//                + safe(medicalAllow) + safe(specialAllow) + safe(otherEarnings);
+//        this.totalDeductions = safe(providentFund) + safe(professionalTax)
+//                + safe(incomeTax) + safe(loanDeduction) + safe(otherDeductions);
+//        this.netSalary = this.grossEarnings - this.totalDeductions;
+//        // LOP adjustment
+//        if (workingDays != null && workingDays > 0 && lopDays != null && lopDays > 0) {
+//            double perDay = this.grossEarnings / workingDays;
+//            this.netSalary = this.netSalary - (perDay * lopDays);
+//        }
+//    }
 
     private double safe(Double v) { return v != null ? v : 0.0; }
 }

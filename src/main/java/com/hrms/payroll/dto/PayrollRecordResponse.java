@@ -1,8 +1,8 @@
+// File: com/hrms/payroll/dto/PayrollRecordResponse.java
 package com.hrms.payroll.dto;
 
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDate;
 
 @Getter @Setter
@@ -48,4 +48,30 @@ public class PayrollRecordResponse {
     private String    remarks;
     private String    aiInsight;
     private String    processedBy;
+
+    // Employee Info (for payslip)
+    private String bankAccount;
+    private String uan;
+    private String pan;
+    private LocalDate dateOfJoining;
+
+    // Additional Earnings
+    private Double overtimePayout;
+    private Double arrears;
+    private Double noticePeriodPay;
+    private Double leaveTravelAllowance;
+    private Double telephoneAllowance;
+    private Double bonusAmount;
+    private Double dearnessAllowance;
+    private Double gradePay;
+    private Double leaveEncashment;
+
+    // Employer Contributions
+    private Double employerPF;
+    private Double npsEmployee;
+    private Double npsEmployer;
+    private Double esiEmployee;
+    private Double esiEmployer;
+    private Double gratuityAccrual;
+    private Double healthEduCess;
 }
