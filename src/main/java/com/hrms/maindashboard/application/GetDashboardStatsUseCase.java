@@ -1,3 +1,4 @@
+// File: com/hrms/maindashboard/application/GetDashboardStatsUseCase.java
 package com.hrms.maindashboard.application;
 
 import com.hrms.employee.domain.Employee;
@@ -29,9 +30,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GetDashboardStatsUseCase {
 
-    private final EmployeeRepository         empRepo;
-    private final TaskRepository             taskRepo;
-    private final PayrollRepository          payrollRepo;
+    private final EmployeeRepository empRepo;
+    private final TaskRepository taskRepo;
+    private final PayrollRepository payrollRepo;
     private final PerformanceReviewRepository perfRepo;
     private final AIService aiService;
 
@@ -74,7 +75,7 @@ public class GetDashboardStatsUseCase {
                 }).toList();
         r.setDeptHeadcounts(deptList);
 
-        // Recent 5 employees (by join date)
+        // Recent 5 employees
         List<DashboardStatsResponse.RecentEmployee> recentEmp = allActive.stream()
                 .filter(e -> e.getJoiningDate() != null)
                 .sorted(Comparator.comparing(Employee::getJoiningDate).reversed())
@@ -91,20 +92,20 @@ public class GetDashboardStatsUseCase {
                 }).toList();
         r.setRecentEmployees(recentEmp);
 
-        // ── Task stats (with fallback) ─────────────────────────────────────
+        // ── Task stats ─────────────────────────────────────────────────────
         List<Task> allTopLevelTasks = taskRepo.findByIsDeletedFalseAndParentTaskIsNull();
 
         int totalT = 0, pendingT = 0, doneT = 0, draftT = 0, progressT = 0, reviewT = 0, overdueT = 0;
         try {
             Object[] agg = taskRepo.aggregateStats();
             if (agg != null && agg.length >= 7) {
-                totalT    = safe(agg[0]);
-                pendingT  = safe(agg[1]);
-                doneT     = safe(agg[2]);
-                draftT    = safe(agg[3]);
+                totalT = safe(agg[0]);
+                pendingT = safe(agg[1]);
+                doneT = safe(agg[2]);
+                draftT = safe(agg[3]);
                 progressT = safe(agg[4]);
-                reviewT   = safe(agg[5]);
-                overdueT  = safe(agg[6]);
+                reviewT = safe(agg[5]);
+                overdueT = safe(agg[6]);
             }
         } catch (Exception ex) {
             log.error("Dashboard aggregateStats() failed: {}", ex.getMessage());
@@ -118,10 +119,10 @@ public class GetDashboardStatsUseCase {
                 String st = t.getStatus() != null ? t.getStatus().name() : "";
                 switch (st) {
                     case "PENDING_APPROVAL" -> pendingT++;
-                    case "IN_PROGRESS"      -> progressT++;
-                    case "COMPLETED"        -> doneT++;
-                    case "DRAFT"            -> draftT++;
-                    case "IN_REVIEW"        -> reviewT++;
+                    case "IN_PROGRESS" -> progressT++;
+                    case "COMPLETED" -> doneT++;
+                    case "DRAFT" -> draftT++;
+                    case "IN_REVIEW" -> reviewT++;
                 }
                 if (t.getDueDate() != null && t.getDueDate().isBefore(now)
                         && !"COMPLETED".equals(st) && !"REJECTED".equals(st)) {
@@ -139,7 +140,7 @@ public class GetDashboardStatsUseCase {
         r.setOverdueTasks(overdueT);
         r.setTaskCompletionRate(totalT > 0 ? Math.round(doneT * 1000.0 / totalT) / 10.0 : 0.0);
 
-        // Recent 5 tasks (by last updated or created)
+        // Recent 5 tasks
         List<DashboardStatsResponse.RecentTask> recentTasks = allTopLevelTasks.stream()
                 .sorted((t1, t2) -> {
                     LocalDateTime d1 = t1.getUpdatedAt() != null ? t1.getUpdatedAt() : t1.getCreatedAt();
@@ -168,24 +169,18 @@ public class GetDashboardStatsUseCase {
         // ── Performance stats ─────────────────────────────────────────────
         calculatePerformanceStats(r);
 
-        // ── AI summary ────────────────────────────────────────────────────
-        r.setAiSummary(buildSummary(r));
-
-        // ── REAL-TIME Activity feed from database ─────────────────────────
+        // ── REAL-TIME Activity feed ───────────────────────────────────────
         r.setRecentActivity(buildRealTimeActivity());
 
-        // ── AI-POWERED Insight (replaces buildSummary) ────────────────────
+        // ── AI-POWERED Insight ────────────────────────────────────────────
         try {
-            // In execute() method, after calculatePerformanceStats(r):
-
-// Build AI data
             DashboardData aiData = new DashboardData();
             aiData.setTotalEmployees(r.getTotalEmployees() != null ? r.getTotalEmployees() : 0);
             aiData.setNewHiresThisMonth(r.getNewHiresThisMonth() != null ? r.getNewHiresThisMonth() : 0);
             aiData.setEmployeeGrowthPct(r.getEmployeeGrowthPct() != null ? r.getEmployeeGrowthPct() : 0.0);
             aiData.setTotalTasks(r.getTotalTasks() != null ? r.getTotalTasks() : 0);
             aiData.setInProgressTasks(r.getInProgressTasks() != null ? r.getInProgressTasks() : 0);
-            aiData.setInReviewTasks(r.getInReviewTasks() != null ? r.getInReviewTasks() : 0); // ← ADD THIS
+            aiData.setInReviewTasks(r.getInReviewTasks() != null ? r.getInReviewTasks() : 0);
             aiData.setOverdueTasks(r.getOverdueTasks() != null ? r.getOverdueTasks() : 0);
             aiData.setCompletedTasks(r.getCompletedTasksThisMonth() != null ? r.getCompletedTasksThisMonth() : 0);
             aiData.setTaskCompletionRate(r.getTaskCompletionRate() != null ? r.getTaskCompletionRate() : 0.0);
@@ -198,13 +193,12 @@ public class GetDashboardStatsUseCase {
             aiData.setPerformanceReviewsDone(r.getPerformanceReviewsDone() != null ? r.getPerformanceReviewsDone() : 0);
             aiData.setDepts(convertDepts(r.getDeptHeadcounts()));
 
-// Generate AI insight
             String aiInsight = aiService.generateDashboardInsights(aiData);
             r.setAiSummary(aiInsight);
             log.info("AI Insight generated: {}", aiInsight);
         } catch (Exception e) {
-            log.error("AI Service failed, using fallback summary: {}", e.getMessage());
-//            r.setAiSummary(buildFallbackSummary(r));  // ← Fallback to simple summary
+            log.error("AI Service failed: {}", e.getMessage());
+            r.setAiSummary(buildSummary(r));
         }
 
         return r;
@@ -221,71 +215,72 @@ public class GetDashboardStatsUseCase {
                 .collect(Collectors.toList());
     }
 
-    /*
-     * Fallback summary when AI service fails
-     */
-//    private String buildFallbackSummary(DashboardStatsResponse r) {
-//        int emp = r.getTotalEmployees() != null ? r.getTotalEmployees() : 0;
-//        int tasks = r.getTotalTasks() != null ? r.getTotalTasks() : 0;
-//        double payroll = r.getTotalPayrollThisMonth() != null ? r.getTotalPayrollThisMonth() : 0;
-//
-//        if (emp == 0) return "Welcome! Start by adding employees to see insights.";
-//
-//        return String.format("📊 %d employees, %d active tasks, ₹%.2fL payroll this month.",
-//                emp, tasks, payroll / 100000);
-//    }
-
-
-    /**
-     * Calculate payroll stats directly from PayrollRecord entities
-     */
+    // ========== PAYROLL STATS - FIXED (Shows ALL months) ==========
     private void calculatePayrollStats(DashboardStatsResponse r, String yearMonth) {
         try {
-            List<PayrollRecord> records = payrollRepo.findByYearMonthAndIsDeletedFalse(yearMonth);
+            String sixMonthsAgo = LocalDate.now().minusMonths(5)
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
-            if (records.isEmpty()) {
-                r.setTotalPayrollThisMonth(0.0);
-                r.setTotalBasicPayroll(0.0);
-                r.setTotalDeductions(0.0);
-                r.setAvgSalary(0.0);
-                r.setPendingPayrollCount(0);
-                r.setProcessedPayrollCount(0);
-                r.setPayrollTrend(new ArrayList<>());
-                r.setRecentPayslips(new ArrayList<>());
+            List<PayrollRecord> allRecords = payrollRepo.findAll().stream()
+                    .filter(pr -> pr.getIsDeleted() == null || !pr.getIsDeleted())
+                    .filter(pr -> pr.getYearMonth() != null)
+                    .filter(pr -> pr.getYearMonth().compareTo(sixMonthsAgo) >= 0)
+                    .toList();
+
+            if (allRecords.isEmpty()) {
+                setDefaultPayrollValues(r);
                 return;
             }
 
-            long processed = records.stream().filter(pr -> "PROCESSED".equals(pr.getStatus())).count();
-            long pending = records.stream().filter(pr -> "PENDING".equals(pr.getStatus())).count();
+            // 🔥 FIX: Find the latest month that actually has records
+            String latestMonthWithData = allRecords.stream()
+                    .map(PayrollRecord::getYearMonth)
+                    .max(String::compareTo)
+                    .orElse(yearMonth);
 
-            r.setProcessedPayrollCount((int) processed);
-            r.setPendingPayrollCount((int) pending);
-
-            List<PayrollRecord> processedRecords = records.stream()
-                    .filter(pr -> "PROCESSED".equals(pr.getStatus()))
+            // Use records from the latest month with data for summary cards
+            List<PayrollRecord> displayMonthRecords = allRecords.stream()
+                    .filter(pr -> latestMonthWithData.equals(pr.getYearMonth()))
                     .toList();
 
-            double totalNet = processedRecords.stream().mapToDouble(pr -> pr.getNetSalary() != null ? pr.getNetSalary() : 0).sum();
-            double totalBasic = processedRecords.stream().mapToDouble(pr -> pr.getBasicSalary() != null ? pr.getBasicSalary() : 0).sum();
-            double totalDeductions = processedRecords.stream().mapToDouble(pr -> pr.getTotalDeductions() != null ? pr.getTotalDeductions() : 0).sum();
+            // Count ALL statuses
+            long processed = displayMonthRecords.stream().filter(pr -> "PROCESSED".equals(pr.getStatus())).count();
+            long approved = displayMonthRecords.stream().filter(pr -> "APPROVED".equals(pr.getStatus())).count();
+            long pending = displayMonthRecords.stream().filter(pr -> "PENDING".equals(pr.getStatus())).count();
+            long draft = displayMonthRecords.stream().filter(pr -> "DRAFT".equals(pr.getStatus())).count();
+
+            r.setProcessedPayrollCount((int) processed);
+            r.setPendingPayrollCount((int) (draft + pending + approved));
+
+            // Calculate from the display month
+            double totalNet = displayMonthRecords.stream()
+                    .mapToDouble(pr -> pr.getNetSalary() != null ? pr.getNetSalary() : 0).sum();
+            double totalBasic = displayMonthRecords.stream()
+                    .mapToDouble(pr -> pr.getBasicSalary() != null ? pr.getBasicSalary() : 0).sum();
+            double totalDeductions = displayMonthRecords.stream()
+                    .mapToDouble(pr -> pr.getTotalDeductions() != null ? pr.getTotalDeductions() : 0).sum();
 
             r.setTotalPayrollThisMonth(totalNet);
             r.setTotalBasicPayroll(totalBasic);
             r.setTotalDeductions(totalDeductions);
-            r.setAvgSalary(processed > 0 ? totalNet / processed : 0.0);
+            r.setAvgSalary(displayMonthRecords.size() > 0 ? totalNet / displayMonthRecords.size() : 0.0);
 
-            // Recent payslips - sorted by payment date or processed date
-            List<DashboardStatsResponse.RecentPayslip> slips = processedRecords.stream()
+            // Recent payslips - from ALL months, sorted by most recent
+            List<DashboardStatsResponse.RecentPayslip> slips = allRecords.stream()
                     .sorted((p1, p2) -> {
-                        if (p1.getPaymentDate() != null && p2.getPaymentDate() != null) {
-                            return p2.getPaymentDate().compareTo(p1.getPaymentDate());
-                        }
-                        return 0;
+                        LocalDateTime d1 = p1.getCreatedAt() != null ? p1.getCreatedAt() : LocalDateTime.MIN;
+                        LocalDateTime d2 = p2.getCreatedAt() != null ? p2.getCreatedAt() : LocalDateTime.MIN;
+                        return d2.compareTo(d1);
                     })
                     .limit(3)
                     .map(pr -> {
                         DashboardStatsResponse.RecentPayslip rp = new DashboardStatsResponse.RecentPayslip();
-                        rp.setEmployeeName(clean(pr.getEmployee().getFirstName() + " " + pr.getEmployee().getLastName()));
+                        if (pr.getEmployee() != null) {
+                            rp.setEmployeeName(clean(pr.getEmployee().getFirstName() + " " +
+                                    (pr.getEmployee().getLastName() != null ? pr.getEmployee().getLastName() : "")));
+                        } else {
+                            rp.setEmployeeName("Employee #" + pr.getId());
+                        }
                         rp.setPayrollMonth(pr.getPayrollMonth());
                         rp.setNetSalary(pr.getNetSalary());
                         rp.setStatus(pr.getStatus());
@@ -300,40 +295,37 @@ public class GetDashboardStatsUseCase {
                 LocalDate date = LocalDate.now().minusMonths(i);
                 String ym = String.format("%04d-%02d", date.getYear(), date.getMonthValue());
 
-                List<PayrollRecord> monthRecords = payrollRepo.findByYearMonthAndIsDeletedFalse(ym);
+                List<PayrollRecord> monthRecords = allRecords.stream()
+                        .filter(pr -> ym.equals(pr.getYearMonth()))
+                        .toList();
 
                 DashboardStatsResponse.PayrollMonthTrend trend = new DashboardStatsResponse.PayrollMonthTrend();
                 trend.setYearMonth(ym);
                 trend.setLabel(date.format(DateTimeFormatter.ofPattern("MMM yy")));
 
                 if (!monthRecords.isEmpty()) {
-                    List<PayrollRecord> monthProcessed = monthRecords.stream()
-                            .filter(pr -> "PROCESSED".equals(pr.getStatus()))
-                            .toList();
-
-                    double monthNet = monthProcessed.stream().mapToDouble(pr -> pr.getNetSalary() != null ? pr.getNetSalary() : 0).sum();
+                    double monthNet = monthRecords.stream()
+                            .mapToDouble(pr -> pr.getNetSalary() != null ? pr.getNetSalary() : 0).sum();
                     trend.setNetPayroll(monthNet);
                     trend.setHeadCount(monthRecords.size());
                 } else {
                     trend.setNetPayroll(0.0);
                     trend.setHeadCount(0);
                 }
-
                 trendList.add(trend);
             }
             r.setPayrollTrend(trendList);
 
-            log.info("Payroll calculated: Total=₹{}, Processed={}, Pending={}", totalNet, processed, pending);
+            log.info("Payroll: DisplayMonth={}, Total=₹{}, Processed={}, Pending={}",
+                    latestMonthWithData, totalNet, processed, draft + pending + approved);
 
         } catch (Exception ex) {
-            log.error("Error calculating payroll stats: {}", ex.getMessage());
+            log.error("Error calculating payroll stats: {}", ex.getMessage(), ex);
             setDefaultPayrollValues(r);
         }
     }
 
-    /**
-     * Calculate performance stats
-     */
+    // ========== PERFORMANCE STATS ==========
     private void calculatePerformanceStats(DashboardStatsResponse r) {
         try {
             Object[] pa = perfRepo.aggregateStats();
@@ -343,15 +335,19 @@ public class GetDashboardStatsUseCase {
                 r.setTotalReviewsThisQuarter(safe(pa[2]));
                 r.setOutstandingEmployees(safe(pa[3]));
             } else {
-                r.setAvgPerformanceRating(0.0); r.setPerformanceReviewsDone(0);
-                r.setTotalReviewsThisQuarter(0); r.setOutstandingEmployees(0);
+                r.setAvgPerformanceRating(0.0);
+                r.setPerformanceReviewsDone(0);
+                r.setTotalReviewsThisQuarter(0);
+                r.setOutstandingEmployees(0);
             }
         } catch (Exception ex) {
-            r.setAvgPerformanceRating(0.0); r.setPerformanceReviewsDone(0);
-            r.setTotalReviewsThisQuarter(0); r.setOutstandingEmployees(0);
+            r.setAvgPerformanceRating(0.0);
+            r.setPerformanceReviewsDone(0);
+            r.setTotalReviewsThisQuarter(0);
+            r.setOutstandingEmployees(0);
         }
 
-        // Top performers - get most recent reviews
+        // Top performers
         try {
             List<PerformanceReview> recentReviews = perfRepo.findAll(
                     PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "reviewedAt"))
@@ -360,7 +356,6 @@ public class GetDashboardStatsUseCase {
             List<DashboardStatsResponse.TopPerformer> top = new ArrayList<>();
             Set<Long> seenEmployees = new HashSet<>();
 
-            // Sort by rating and get top 3 unique employees
             recentReviews.stream()
                     .filter(pr -> pr != null && pr.getEmployee() != null)
                     .sorted((r1, r2) -> Double.compare(r2.getRating(), r1.getRating()))
@@ -404,16 +399,13 @@ public class GetDashboardStatsUseCase {
         }
     }
 
-    /**
-     * Build REAL-TIME activity feed from actual database records
-     * No hardcoded data - everything comes from the database
-     */
+    // ========== REAL-TIME ACTIVITY - FIXED SORTING ==========
     private List<DashboardStatsResponse.ActivityItem> buildRealTimeActivity() {
         List<DashboardStatsResponse.ActivityItem> activities = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime sevenDaysAgo = now.minusDays(7);
 
-        // 1. Recent Employee Joins (last 7 days)
+        // 1. Recent Employee Joins
         try {
             List<Employee> recentJoins = empRepo.findByIsActiveTrueAndIsDeletedFalse().stream()
                     .filter(e -> e.getJoiningDate() != null)
@@ -436,7 +428,7 @@ public class GetDashboardStatsUseCase {
             log.error("Error fetching recent employee joins: {}", e.getMessage());
         }
 
-        // 2. Recent Task Updates (last 7 days)
+        // 2. Recent Task Updates
         try {
             List<Task> recentTaskUpdates = taskRepo.findByIsDeletedFalse().stream()
                     .filter(t -> t.getUpdatedAt() != null && t.getUpdatedAt().isAfter(sevenDaysAgo))
@@ -458,33 +450,51 @@ public class GetDashboardStatsUseCase {
             log.error("Error fetching recent task updates: {}", e.getMessage());
         }
 
-        // 3. Recent Payroll Processing (last 7 days)
+        // 3. Recent Payroll - FIXED: null check on getCreatedAt()
         try {
-            List<PayrollRecord> recentPayroll = payrollRepo.findAll().stream()
-                    .filter(pr -> "PROCESSED".equals(pr.getStatus()))
-                    .filter(pr -> pr.getUpdatedAt() != null && pr.getUpdatedAt().isAfter(sevenDaysAgo))
-                    .sorted(Comparator.comparing(PayrollRecord::getUpdatedAt).reversed())
+            List<PayrollRecord> allPayroll = payrollRepo.findAll();
+            List<PayrollRecord> recentPayroll = allPayroll.stream()
+                    .filter(pr -> pr.getCreatedAt() != null)
+                    .filter(pr -> pr.getCreatedAt().isAfter(sevenDaysAgo))
+                    .sorted(Comparator.comparing(PayrollRecord::getCreatedAt).reversed())
                     .limit(5)
                     .toList();
 
             for (PayrollRecord pr : recentPayroll) {
                 DashboardStatsResponse.ActivityItem a = new DashboardStatsResponse.ActivityItem();
                 a.setModule("PAYROLL");
-                a.setType("process");
-                String empName = pr.getEmployee() != null ?
-                        clean(pr.getEmployee().getFirstName() + " " + pr.getEmployee().getLastName()) : "Employee";
+                a.setType(pr.getStatus() != null ? pr.getStatus().toLowerCase() : "generated");
+
+                String empName = "Employee";
+                if (pr.getEmployee() != null) {
+                    empName = clean(pr.getEmployee().getFirstName());
+                }
+
                 String salary = pr.getNetSalary() != null ?
                         "₹" + Math.round(pr.getNetSalary() / 1000) + "K" : "";
-                a.setAction("Payroll processed for " + empName + " - " + salary);
+
+                String action;
+                String st = pr.getStatus();
+                if ("PROCESSED".equals(st)) {
+                    action = "Payroll processed for " + empName + " - " + salary;
+                } else if ("APPROVED".equals(st)) {
+                    action = "Payroll approved for " + empName + " - " + salary;
+                } else if ("PENDING".equals(st)) {
+                    action = "Payroll submitted for " + empName + " - " + salary;
+                } else {
+                    action = "Payroll generated for " + empName + " - " + salary;
+                }
+
+                a.setAction(action);
                 a.setActor(pr.getProcessedBy() != null ? pr.getProcessedBy() : "Payroll Admin");
-                a.setTimestamp(formatTimeAgo(pr.getUpdatedAt()));
+                a.setTimestamp(formatTimeAgo(pr.getCreatedAt()));
                 activities.add(a);
             }
         } catch (Exception e) {
             log.error("Error fetching recent payroll: {}", e.getMessage());
         }
 
-        // 4. Recent Performance Reviews (last 7 days)
+        // 4. Recent Performance Reviews
         try {
             List<PerformanceReview> recentReviews = perfRepo.findAll(
                             PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "reviewedAt"))
@@ -501,7 +511,6 @@ public class GetDashboardStatsUseCase {
                         clean(pr.getEmployee().getFirstName() + " " + pr.getEmployee().getLastName()) : "Employee";
                 String badge = ratingBadge(pr.getRating());
                 a.setAction(empName + " received " + badge + " rating (" + pr.getRating() + "/5)");
-                //                a.setActor(pr.getReviewedBy() != null ? pr.getReviewedBy() : "Manager");
                 a.setActor("Manager");
                 a.setTimestamp(formatTimeAgo(pr.getReviewedAt()));
                 activities.add(a);
@@ -510,36 +519,58 @@ public class GetDashboardStatsUseCase {
             log.error("Error fetching recent performance reviews: {}", e.getMessage());
         }
 
-        // Sort all activities by timestamp (most recent first) and limit to 10
+        // FIXED: Sort by actual time - most recent first
         return activities.stream()
                 .sorted((a1, a2) -> {
-                    // Parse relative timestamps for sorting (simplified)
-                    if (a1.getTimestamp().contains("Just now")) return -1;
-                    if (a2.getTimestamp().contains("Just now")) return 1;
-                    if (a1.getTimestamp().contains("minute")) return -1;
-                    if (a2.getTimestamp().contains("minute")) return 1;
-                    return a2.getTimestamp().compareTo(a1.getTimestamp());
+                    int mins1 = extractMinutes(a1.getTimestamp());
+                    int mins2 = extractMinutes(a2.getTimestamp());
+                    return Integer.compare(mins1, mins2); // Lower = more recent
                 })
                 .limit(10)
                 .toList();
     }
 
     /**
-     * Format timestamp as human-readable relative time
+     * Extract approximate minutes from timestamp string for sorting
+     * "Just now" = 0, "5 min ago" = 5, "2 hour ago" = 120
      */
+    private int extractMinutes(String timestamp) {
+        if (timestamp == null) return 9999;
+        if (timestamp.contains("Just now")) return 0;
+        if (timestamp.contains("min")) {
+            try {
+                return Integer.parseInt(timestamp.replaceAll("[^0-9]", ""));
+            } catch (Exception e) {
+                return 60;
+            }
+        }
+        if (timestamp.contains("hour")) {
+            try {
+                return Integer.parseInt(timestamp.replaceAll("[^0-9]", "")) * 60;
+            } catch (Exception e) {
+                return 120;
+            }
+        }
+        if (timestamp.contains("day")) {
+            try {
+                return Integer.parseInt(timestamp.replaceAll("[^0-9]", "")) * 1440;
+            } catch (Exception e) {
+                return 2880;
+            }
+        }
+        return 9999; // Old items at bottom
+    }
+
     private String formatTimeAgo(LocalDateTime dateTime) {
         if (dateTime == null) return "Recently";
-
         LocalDateTime now = LocalDateTime.now();
         long minutes = ChronoUnit.MINUTES.between(dateTime, now);
         long hours = ChronoUnit.HOURS.between(dateTime, now);
         long days = ChronoUnit.DAYS.between(dateTime, now);
-
         if (minutes < 1) return "Just now";
         if (minutes < 60) return minutes + " min ago";
         if (hours < 24) return hours + " hour" + (hours > 1 ? "s" : "") + " ago";
         if (days < 7) return days + " day" + (days > 1 ? "s" : "") + " ago";
-
         return dateTime.format(DateTimeFormatter.ofPattern("d MMM"));
     }
 
@@ -555,28 +586,15 @@ public class GetDashboardStatsUseCase {
     }
 
     private String buildSummary(DashboardStatsResponse r) {
-        int    emp   = r.getTotalEmployees()        != null ? r.getTotalEmployees()        : 0;
-        int    hire  = r.getNewHiresThisMonth()     != null ? r.getNewHiresThisMonth()     : 0;
-        int    tasks = r.getTotalTasks()            != null ? r.getTotalTasks()            : 0;
-        int    prog  = r.getInProgressTasks()       != null ? r.getInProgressTasks()       : 0;
-        int    over  = r.getOverdueTasks()          != null ? r.getOverdueTasks()          : 0;
-        double net   = r.getTotalPayrollThisMonth() != null ? r.getTotalPayrollThisMonth() : 0;
-        double rat   = r.getAvgPerformanceRating()  != null ? r.getAvgPerformanceRating()  : 0;
-
-        if (emp == 0) return "Welcome! Start by adding employees and configuring the system.";
-
+        int emp = r.getTotalEmployees() != null ? r.getTotalEmployees() : 0;
+        int tasks = r.getTotalTasks() != null ? r.getTotalTasks() : 0;
+        double net = r.getTotalPayrollThisMonth() != null ? r.getTotalPayrollThisMonth() : 0;
+        if (emp == 0) return "Welcome! Start by adding employees.";
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Workforce at %d active employee%s", emp, emp > 1 ? "s" : ""));
-        if (hire > 0) sb.append(String.format(", %d new hire%s this month", hire, hire > 1 ? "s" : ""));
+        sb.append(String.format("%d employees", emp));
+        if (tasks > 0) sb.append(String.format(", %d tasks", tasks));
+        if (net > 0) sb.append(String.format(", ₹%.2fL payroll", net / 100000));
         sb.append('.');
-        if (tasks > 0) {
-            sb.append(String.format(" %d task%s active", tasks, tasks > 1 ? "s" : ""));
-            if (prog > 0) sb.append(String.format(", %d in progress", prog));
-            if (over > 0) sb.append(String.format(", %d overdue", over));
-            sb.append('.');
-        }
-        if (net > 0) sb.append(String.format(" Payroll: ₹%.2fL this month.", net / 100000));
-        if (rat > 0) sb.append(String.format(" Avg performance: %.1f/5.", rat));
         return sb.toString();
     }
 

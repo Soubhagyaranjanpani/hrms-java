@@ -5,27 +5,19 @@ import com.hrms.payroll.dto.PayrollRecordResponse;
 import org.apache.pdfbox.pdmodel.*;
 import org.apache.pdfbox.pdmodel.font.*;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.springframework.stereotype.Service;
 
-import java.awt.*;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 
 @Service
 public class PdfPayslipGenerator {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-
-    private static final Color COLOR_DARK = new Color(17, 24, 39);
-    private static final Color COLOR_GRAY = new Color(107, 114, 128);
-    private static final Color COLOR_LIGHT_GRAY = new Color(249, 250, 251);
-    private static final Color COLOR_WHITE = new Color(255, 255, 255);
-    private static final Color COLOR_BORDER = new Color(229, 231, 235);
-    private static final Color COLOR_HEADER_BG = new Color(243, 244, 246);
-    private static final Color COLOR_GREEN = new Color(5, 150, 105);
-    private static final Color COLOR_RED = new Color(220, 38, 38);
-    private static final Color COLOR_BLUE = new Color(37, 99, 235);
-    private static final Color COLOR_BLACK = new Color(0, 0, 0);
 
     public byte[] generatePayslip(PayrollRecordResponse record) throws Exception {
         try (PDDocument document = new PDDocument()) {
@@ -41,127 +33,209 @@ public class PdfPayslipGenerator {
                 float margin = 40;
                 float contentWidth = pageWidth - 2 * margin;
 
-                // Column positions for the table
                 float leftColX = margin;
                 float leftAmtX = margin + contentWidth * 0.42f;
                 float rightColX = margin + contentWidth * 0.55f;
                 float rightAmtX = pageWidth - margin - 60;
 
-                // ========== TOP BAR ==========
-                cs.setNonStrokingColor(COLOR_BLUE);
-                cs.addRect(0, pageHeight - 4, pageWidth, 4);
-                cs.fill();
-
                 // ========== HEADER ==========
-                float yPos = pageHeight - 35;
+                float currentY = pageHeight - 40;
 
-                cs.setNonStrokingColor(COLOR_BLUE);
-                cs.setFont(fontBold, 18);
-                cs.beginText();
-                cs.newLineAtOffset(margin, yPos);
-                cs.showText("HRMS");
-                cs.endText();
+                // Logo dimensions (adjusted for your logo)
+                float logoWidth = 160;
+                float logoHeight = 50;
 
-                cs.setNonStrokingColor(COLOR_BLACK);
+                // Load and draw logo with proper color handling
+                boolean logoDrawn = false;
+
+                // Try multiple paths and formats
+                String[] logoPaths = {
+                        "/images/arigen-logo-23.webp",
+                        "/images/arigen-logo-23.png",
+                        "/static/images/arigen-logo-23.webp",
+                        "/static/images/arigen-logo-23.png"
+                };
+
+                for (String logoPath : logoPaths) {
+                    try (InputStream logoStream = getClass().getResourceAsStream(logoPath)) {
+                        if (logoStream != null) {
+                            BufferedImage bufferedImage = ImageIO.read(logoStream);
+                            if (bufferedImage != null) {
+                                // Convert to PNG bytes preserving colors
+                                ByteArrayOutputStream pngBytes = new ByteArrayOutputStream();
+                                ImageIO.write(bufferedImage, "png", pngBytes);
+                                PDImageXObject logo = PDImageXObject.createFromByteArray(
+                                        document, pngBytes.toByteArray(), "logo");
+
+                                // Calculate height based on aspect ratio to maintain proportions
+                                float aspectRatio = (float) bufferedImage.getWidth() / bufferedImage.getHeight();
+                                logoHeight = logoWidth / aspectRatio;
+
+                                // Draw logo at top-left with original colors
+                                cs.drawImage(logo, margin, currentY - logoHeight, logoWidth, logoHeight);
+                                logoDrawn = true;
+                                break;
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Failed to load logo from " + logoPath + ": " + e.getMessage());
+                    }
+                }
+
+                // Fallback: Try to load from WEBP format directly
+                if (!logoDrawn) {
+                    try {
+                        InputStream webpStream = getClass().getResourceAsStream("/images/arigen-logo-23.webp");
+                        if (webpStream != null) {
+                            BufferedImage bufferedImage = ImageIO.read(webpStream);
+                            if (bufferedImage != null) {
+                                ByteArrayOutputStream pngBytes = new ByteArrayOutputStream();
+                                ImageIO.write(bufferedImage, "png", pngBytes);
+                                PDImageXObject logo = PDImageXObject.createFromByteArray(
+                                        document, pngBytes.toByteArray(), "logo");
+
+                                float aspectRatio = (float) bufferedImage.getWidth() / bufferedImage.getHeight();
+                                logoHeight = logoWidth / aspectRatio;
+                                cs.drawImage(logo, margin, currentY - logoHeight, logoWidth, logoHeight);
+                                logoDrawn = true;
+                            }
+                            webpStream.close();
+                        }
+                    } catch (Exception e) {
+                        System.err.println("WEBP fallback failed: " + e.getMessage());
+                    }
+                }
+
+                // Company name (with proper spacing based on logo presence)
+                float companyNameX = margin + logoWidth + 15;
+                if (!logoDrawn) {
+                    companyNameX = margin;
+                }
+
+                // ARIGEN TECHNOLOGY - in your original colors (blue/dark theme)
+//                cs.setNonStrokingColor(new java.awt.Color(0, 51, 102)); // Deep blue for the brand
+//                cs.setFont(fontBold, 18);
+//                cs.beginText();
+//                cs.newLineAtOffset(companyNameX, currentY - 8);
+//                cs.showText("ARIGEN TECHNOLOGY");
+//                cs.endText();
+
+                // Tagline - in grey as per your logo
+//                cs.setNonStrokingColor(new java.awt.Color(102, 102, 102));
+//                cs.setFont(fontRegular, 8);
+//                cs.beginText();
+//                cs.newLineAtOffset(companyNameX, currentY - 22);
+//                cs.showText("SOLUTION FOR GENERATION NEXT");
+//                cs.endText();
+
+                // PAYSLIP title on right
+                cs.setNonStrokingColor(new java.awt.Color(0, 0, 0));
                 cs.setFont(fontBold, 16);
                 String title = "PAYSLIP";
                 float titleWidth = getTextWidth(title, fontBold, 16);
                 cs.beginText();
-                cs.newLineAtOffset(pageWidth - margin - titleWidth, yPos);
+                cs.newLineAtOffset(pageWidth - margin - titleWidth, currentY - 8);
                 cs.showText(title);
                 cs.endText();
 
-                cs.setNonStrokingColor(COLOR_GRAY);
+                // Month
                 cs.setFont(fontRegular, 10);
                 String monthText = record.getPayrollMonth() != null ? record.getPayrollMonth() : "";
                 float monthWidth = getTextWidth(monthText, fontRegular, 10);
                 cs.beginText();
-                cs.newLineAtOffset(pageWidth - margin - monthWidth, yPos - 14);
+                cs.newLineAtOffset(pageWidth - margin - monthWidth, currentY - 23);
                 cs.showText(monthText);
                 cs.endText();
 
-                // Divider
-                yPos -= 30;
-                drawLine(cs, margin, yPos, pageWidth - margin, yPos, COLOR_BORDER, 0.5f);
+                // Divider line with brand color
+                currentY -= 38;
+                cs.setStrokingColor(new java.awt.Color(0, 51, 102));
+                cs.setLineWidth(1.5f);
+                cs.moveTo(margin, currentY);
+                cs.lineTo(pageWidth - margin, currentY);
+                cs.stroke();
 
-                // ========== EMPLOYEE INFO - SINGLE SIDED LAYOUT ==========
-                yPos -= 20;
+                // ========== EMPLOYEE INFORMATION ==========
+                currentY -= 20;
 
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "Name", cleanString(record.getEmployee()));
-                yPos -= 16;
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "Designation", cleanString(record.getDesignation()));
-                yPos -= 16;
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "Date of Joining", record.getDateOfJoining() != null ? record.getDateOfJoining().format(DATE_FORMAT) : "—");
-                yPos -= 16;
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "Paid Days", String.valueOf(record.getPaidDays() != null ? record.getPaidDays() : 0));
-                yPos -= 16;
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "Bank A/c", cleanString(record.getBankAccount()));
-                yPos -= 16;
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "UAN", cleanString(record.getUan()));
-                yPos -= 16;
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "Employee Code", cleanString(record.getEmployeeCode()));
-                yPos -= 16;
-                drawInfoRow(cs, fontRegular, fontBold, margin, yPos, "PAN", cleanString(record.getPan()));
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "Name", cleanString(record.getEmployee()));
+                currentY -= 18;
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "Role", cleanString(record.getDesignation()));
+                currentY -= 18;
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "Date of Joining",
+                        record.getDateOfJoining() != null ? record.getDateOfJoining().format(DATE_FORMAT) : "—");
+                currentY -= 18;
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "Paid Days",
+                        String.valueOf(record.getPaidDays() != null ? record.getPaidDays() : 0));
+                currentY -= 18;
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "Bank A/c", cleanString(record.getBankAccount()));
+                currentY -= 18;
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "UAN", cleanString(record.getUan()));
+                currentY -= 18;
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "Employee Code", cleanString(record.getEmployeeCode()));
+                currentY -= 18;
+                drawInfoRow(cs, fontRegular, fontBold, margin, currentY, "PAN", cleanString(record.getPan()));
 
-                // Divider
-                yPos -= 10;
-                drawLine(cs, margin, yPos, pageWidth - margin, yPos, COLOR_BORDER, 0.5f);
+                // Divider line
+                currentY -= 10;
+                cs.setStrokingColor(new java.awt.Color(0, 51, 102));
+                cs.setLineWidth(0.8f);
+                cs.moveTo(margin, currentY);
+                cs.lineTo(pageWidth - margin, currentY);
+                cs.stroke();
 
                 // ========== SALARY TABLE ==========
-                yPos -= 15;
-                float tableTopY = yPos;
+                currentY -= 15;
+                float tableStartY = currentY;
 
-                // Section titles
-                cs.setNonStrokingColor(COLOR_BLACK);
+                // Earnings & Deductions headers
+                cs.setNonStrokingColor(new java.awt.Color(0, 51, 102));
                 cs.setFont(fontBold, 11);
                 cs.beginText();
-                cs.newLineAtOffset(leftColX + 5, tableTopY);
+                cs.newLineAtOffset(leftColX + 5, tableStartY);
                 cs.showText("Earnings");
                 cs.endText();
                 cs.beginText();
-                cs.newLineAtOffset(rightColX + 5, tableTopY);
+                cs.newLineAtOffset(rightColX + 5, tableStartY);
                 cs.showText("Deductions");
                 cs.endText();
 
-                // Table header
-                float tY = tableTopY - 14;
-                cs.setNonStrokingColor(COLOR_HEADER_BG);
-                cs.addRect(margin, tY - 14, contentWidth, 20);
+                // Column headers background
+                float headerY = tableStartY - 15;
+                cs.setNonStrokingColor(new java.awt.Color(220, 230, 242)); // Light blue background
+                cs.addRect(margin, headerY - 12, contentWidth, 18);
                 cs.fill();
 
-                cs.setNonStrokingColor(COLOR_BLACK);
+                // Column headers text
+                cs.setNonStrokingColor(new java.awt.Color(0, 51, 102));
                 cs.setFont(fontBold, 9);
-
-                // Left headers
                 cs.beginText();
-                cs.newLineAtOffset(leftColX + 5, tY - 4);
+                cs.newLineAtOffset(leftColX + 5, headerY - 3);
                 cs.showText("Particulars");
                 cs.endText();
                 cs.beginText();
-                cs.newLineAtOffset(leftAmtX, tY - 4);
-                cs.showText("Amount (Rs.)");
+                cs.newLineAtOffset(leftAmtX, headerY - 3);
+                cs.showText("Amount");
                 cs.endText();
-
-                // Right headers
                 cs.beginText();
-                cs.newLineAtOffset(rightColX + 5, tY - 4);
+                cs.newLineAtOffset(rightColX + 5, headerY - 3);
                 cs.showText("Particulars");
                 cs.endText();
                 cs.beginText();
-                cs.newLineAtOffset(rightAmtX, tY - 4);
+                cs.newLineAtOffset(rightAmtX, headerY - 3);
                 cs.showText("Amount (Rs.)");
                 cs.endText();
 
-                // Vertical divider between left and right
+                // Vertical divider
                 float midX = margin + contentWidth / 2;
-                cs.setStrokingColor(COLOR_BORDER);
-                cs.setLineWidth(0.3f);
-                cs.moveTo(midX, tY - 14);
-                cs.lineTo(midX, tY - 500);
+                cs.setStrokingColor(new java.awt.Color(180, 180, 180));
+                cs.setLineWidth(0.5f);
+                cs.moveTo(midX, headerY + 6);
+                cs.lineTo(midX, headerY - 255);
                 cs.stroke();
 
-                // Rows
-                float rowY = tY - 30;
+                // Table rows
+                float rowY = headerY - 28;
                 float rowHeight = 17;
 
                 String[][] earnings = {
@@ -193,17 +267,17 @@ public class PdfPayslipGenerator {
                 for (int i = 0; i < maxRows; i++) {
                     float crY = rowY - (i * rowHeight);
 
-                    // Row background
+                    // Alternate row shading
                     if (i % 2 == 0) {
-                        cs.setNonStrokingColor(COLOR_LIGHT_GRAY);
-                        cs.addRect(margin, crY - 12, contentWidth, rowHeight);
+                        cs.setNonStrokingColor(new java.awt.Color(248, 250, 252)); // Very light blue
+                        cs.addRect(margin, crY - 11, contentWidth, rowHeight);
                         cs.fill();
                     }
 
-                    cs.setNonStrokingColor(COLOR_BLACK);
+                    cs.setNonStrokingColor(new java.awt.Color(0, 0, 0));
                     cs.setFont(fontRegular, 9);
 
-                    // Left (Earnings)
+                    // Earnings column
                     if (i < earnings.length) {
                         cs.beginText();
                         cs.newLineAtOffset(leftColX + 5, crY - 3);
@@ -215,7 +289,7 @@ public class PdfPayslipGenerator {
                         cs.endText();
                     }
 
-                    // Right (Deductions)
+                    // Deductions column
                     if (i < deductions.length) {
                         cs.beginText();
                         cs.newLineAtOffset(rightColX + 5, crY - 3);
@@ -228,70 +302,89 @@ public class PdfPayslipGenerator {
                     }
                 }
 
-                // Gross / Total row
-                float grossY = rowY - (maxRows * rowHeight) - 15;
-                drawLine(cs, margin, grossY + 5, pageWidth - margin, grossY + 5, COLOR_BORDER, 0.5f);
+                // Gross row
+                float grossY = rowY - (maxRows * rowHeight) - 22;
 
-                cs.setNonStrokingColor(COLOR_HEADER_BG);
-                cs.addRect(margin, grossY - 12, contentWidth, 20);
+                // Top line
+                cs.setStrokingColor(new java.awt.Color(0, 51, 102));
+                cs.setLineWidth(1f);
+                cs.moveTo(margin, grossY + 5);
+                cs.lineTo(pageWidth - margin, grossY + 5);
+                cs.stroke();
+
+                // Gross row background
+                cs.setNonStrokingColor(new java.awt.Color(240, 245, 250));
+                cs.addRect(margin, grossY - 14, contentWidth, 22);
                 cs.fill();
 
-                cs.setNonStrokingColor(COLOR_BLACK);
+                cs.setNonStrokingColor(new java.awt.Color(0, 51, 102));
                 cs.setFont(fontBold, 10);
-
                 cs.beginText();
-                cs.newLineAtOffset(leftColX + 5, grossY - 2);
+                cs.newLineAtOffset(leftColX + 5, grossY - 4);
                 cs.showText("Gross Earnings");
                 cs.endText();
                 cs.beginText();
-                cs.newLineAtOffset(leftAmtX, grossY - 2);
+                cs.newLineAtOffset(leftAmtX, grossY - 4);
                 cs.showText(formatAmount(record.getGrossEarnings()));
                 cs.endText();
-
                 cs.beginText();
-                cs.newLineAtOffset(rightColX + 5, grossY - 2);
+                cs.newLineAtOffset(rightColX + 5, grossY - 4);
                 cs.showText("Gross Deductions");
                 cs.endText();
                 cs.beginText();
-                cs.newLineAtOffset(rightAmtX, grossY - 2);
+                cs.newLineAtOffset(rightAmtX, grossY - 4);
                 cs.showText(formatAmount(record.getTotalDeductions()));
                 cs.endText();
 
-                // ========== NET PAYABLE ==========
-                float netY = grossY - 45;
-                drawLine(cs, margin, netY + 10, pageWidth - margin, netY + 10, COLOR_BORDER, 0.5f);
+                // Bottom line
+                cs.moveTo(margin, grossY - 14);
+                cs.lineTo(pageWidth - margin, grossY - 14);
+                cs.stroke();
 
-                cs.setNonStrokingColor(COLOR_BLACK);
-                cs.setFont(fontBold, 11);
+                // ========== NET PAYABLE ==========
+                float netY = grossY - 50;
+
+                cs.setNonStrokingColor(new java.awt.Color(0, 51, 102));
+                cs.setFont(fontBold, 12);
                 cs.beginText();
-                cs.newLineAtOffset(margin + 5, netY - 5);
+                cs.newLineAtOffset(margin + 5, netY);
                 cs.showText("Net Payable Salary:");
                 cs.endText();
 
-                cs.setNonStrokingColor(COLOR_GREEN);
+                cs.setNonStrokingColor(new java.awt.Color(0, 102, 51)); // Green for net amount
                 cs.setFont(fontBold, 14);
                 String netAmount = "Rs. " + formatAmountPlain(record.getNetSalary());
                 cs.beginText();
-                cs.newLineAtOffset(leftAmtX, netY - 5);
+                cs.newLineAtOffset(leftAmtX, netY);
                 cs.showText(netAmount);
                 cs.endText();
 
                 // Amount in words
-                cs.setNonStrokingColor(COLOR_GRAY);
+                cs.setNonStrokingColor(new java.awt.Color(80, 80, 80));
                 cs.setFont(fontRegular, 9);
                 String amountInWords = "Rupees " + convertToWords(record.getNetSalary()) + " Only";
                 cs.beginText();
-                cs.newLineAtOffset(margin + 5, netY - 22);
+                cs.newLineAtOffset(margin + 5, netY - 16);
                 cs.showText(amountInWords);
                 cs.endText();
 
                 // ========== FOOTER ==========
-                cs.setNonStrokingColor(COLOR_GRAY);
-                cs.setFont(fontRegular, 7);
-                String footer = "This is a computer generated payslip no signature is required";
-                float footerWidth = getTextWidth(footer, fontRegular, 7);
+                float footerY = 45;
+
+                // Footer line
+                cs.setStrokingColor(new java.awt.Color(200, 200, 200));
+                cs.setLineWidth(0.5f);
+                cs.moveTo(margin, footerY + 5);
+                cs.lineTo(pageWidth - margin, footerY + 5);
+                cs.stroke();
+
+                // Footer text
+                cs.setNonStrokingColor(new java.awt.Color(120, 120, 120));
+                cs.setFont(fontRegular, 8);
+                String footer = "This is a computer generated payslip, no signature is required.";
+                float footerWidth = getTextWidth(footer, fontRegular, 8);
                 cs.beginText();
-                cs.newLineAtOffset((pageWidth - footerWidth) / 2, 25);
+                cs.newLineAtOffset((pageWidth - footerWidth) / 2, footerY - 5);
                 cs.showText(footer);
                 cs.endText();
             }
@@ -304,30 +397,23 @@ public class PdfPayslipGenerator {
 
     private void drawInfoRow(PDPageContentStream cs, PDFont fontRegular, PDFont fontBold,
                              float x, float y, String label, String value) throws Exception {
-        // Two-column layout for info
-        float labelWidth = 120;
+        float labelWidth = 110;
 
-        cs.setNonStrokingColor(COLOR_GRAY);
+        // Label
+        cs.setNonStrokingColor(new java.awt.Color(80, 80, 80));
         cs.setFont(fontRegular, 9);
         cs.beginText();
         cs.newLineAtOffset(x, y);
         cs.showText(label + ":");
         cs.endText();
 
-        cs.setNonStrokingColor(COLOR_BLACK);
-        cs.setFont(fontBold, 11);
+        // Value
+        cs.setNonStrokingColor(new java.awt.Color(0, 0, 0));
+        cs.setFont(fontBold, 10);
         cs.beginText();
         cs.newLineAtOffset(x + labelWidth, y);
         cs.showText(value);
         cs.endText();
-    }
-
-    private void drawLine(PDPageContentStream cs, float x1, float y1, float x2, float y2, Color color, float width) throws Exception {
-        cs.setStrokingColor(color);
-        cs.setLineWidth(width);
-        cs.moveTo(x1, y1);
-        cs.lineTo(x2, y2);
-        cs.stroke();
     }
 
     private String convertToWords(Double amount) {

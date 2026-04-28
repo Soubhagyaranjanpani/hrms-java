@@ -92,6 +92,9 @@ public class CreateEmployeeUseCase {
         emp.setAddress(request.getAddress());
         emp.setProfilePicture(request.getProfilePicture());
         emp.setJoiningDate(request.getJoiningDate());
+        emp.setBankAccount(request.getBankAccount());
+        emp.setUan(request.getUan());
+        emp.setPan(request.getPan());
         // In the execute method, add:
         // In the execute method, add:
         if (request.getGradeId() != null) {

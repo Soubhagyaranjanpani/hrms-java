@@ -24,4 +24,7 @@ public class EmployeeProfileResponse {
     private String gradeName;
     private String gradeCode;
     private Double gradePay;
+    private String bankAccount;
+    private String uan;
+    private String pan;
 }

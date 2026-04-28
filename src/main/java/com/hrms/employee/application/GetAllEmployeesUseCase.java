@@ -56,6 +56,11 @@ public class GetAllEmployeesUseCase {
             res.setGradePay(emp.getGrade().getGradePay());
         }
 
+        res.setBankAccount(emp.getBankAccount());
+        res.setUan(emp.getUan());
+        res.setPan(emp.getPan());
+
+
         return res;
     }
 }

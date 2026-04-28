@@ -20,4 +20,7 @@ public class EmployeeUpdateReq {
     private Long managerId;
     private Long gradeId;
     private Boolean isActive;
+    private String bankAccount;
+    private String uan;
+    private String pan;
 }
