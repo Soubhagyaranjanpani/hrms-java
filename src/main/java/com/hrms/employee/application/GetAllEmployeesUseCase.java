@@ -48,6 +48,18 @@ public class GetAllEmployeesUseCase {
         res.setAddress(emp.getAddress());
         res.setProfilePicture(emp.getProfilePicture());
         res.setLastLogin(emp.getLastLogin());
+        // In your mapper/service where you build EmployeeProfileResponse
+        if (emp.getGrade() != null) {
+            res.setGradeId(emp.getGrade().getId());
+            res.setGradeName(emp.getGrade().getName());
+            res.setGradeCode(emp.getGrade().getCode());
+            res.setGradePay(emp.getGrade().getGradePay());
+        }
+
+        res.setBankAccount(emp.getBankAccount());
+        res.setUan(emp.getUan());
+        res.setPan(emp.getPan());
+
 
         return res;
     }

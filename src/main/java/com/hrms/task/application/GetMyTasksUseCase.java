@@ -16,25 +16,15 @@ public class GetMyTasksUseCase {
 
     private final TaskRepository taskRepo;
     private final EmployeeRepository employeeRepo;
+    private final CreateTaskUseCase createTaskUseCase;
 
     public List<TaskResponse> execute(String email) {
-
         Employee emp = employeeRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return taskRepo.findByAssignedToAndIsDeletedFalse(emp)
-                .stream().map(this::map).toList();
-    }
-
-    private TaskResponse map(Task t) {
-        TaskResponse r = new TaskResponse();
-        r.setId(t.getId());
-        r.setTitle(t.getTitle());
-        r.setStatus(t.getStatus());
-        r.setPriority(t.getPriority());
-        r.setAssignedTo(t.getAssignedTo().getFirstName());
-        r.setAssignedBy(t.getAssignedBy().getFirstName());
-        r.setDueDate(t.getDueDate());
-        return r;
+                .stream()
+                .map(createTaskUseCase::mapToResponse)
+                .toList();
     }
 }

@@ -20,4 +20,10 @@ public class EmployeeCreationReq {
     private Long roleId;
     private Long departmentId;
     private Long branchId;
+    private Long gradeId;
+    private String bankAccount;
+    private String uan;
+    private String pan;
+
+
 }

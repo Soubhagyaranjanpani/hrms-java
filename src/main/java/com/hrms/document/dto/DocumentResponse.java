@@ -32,4 +32,11 @@ public class DocumentResponse {
 
     @Schema(example = "2026-04-01T10:15:30")
     private LocalDateTime uploadedAt;
+
+
+
+        private String uploadedBy;
+        private Long fileSize;
+
+
 }

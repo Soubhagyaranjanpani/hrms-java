@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
+@Table(name = "task_escalations")
 public class TaskEscalation {
 
     @Id
@@ -17,11 +18,13 @@ public class TaskEscalation {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "task_id")
     private Task task;
 
     private Integer level;
 
     @ManyToOne
+    @JoinColumn(name = "escalated_to_id")
     private Employee escalatedTo;
 
     private LocalDateTime triggeredAt;

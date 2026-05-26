@@ -1,9 +1,13 @@
 package com.hrms.employee.api;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.hrms.common.utils.ResponseUtils;
 import com.hrms.employee.application.*;
+import com.hrms.employee.domain.Employee;
 import com.hrms.employee.dto.*;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.*;
+import com.hrms.employee.infrastructure.EmployeeRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,6 +18,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -32,6 +40,7 @@ public class EmployeeController {
     private final GetAllEmployeesUseCase getAllEmployeesUseCase;
     private final DeleteEmployeeUseCase deleteEmployeeUseCase;
     private final UpdateEmployeeUseCase updateEmployeeUseCase;
+    private final EmployeeRepository employeeRepo;
 
     // =========================
     // ADMIN APIs
@@ -144,6 +153,28 @@ public class EmployeeController {
     public ResponseEntity<ApiResponse<EmployeeProfileResponse>> getProfile(
             @PathVariable String username) {
         return ResponseEntity.ok(getEmployeeProfileUseCase.execute(username));
+    }
+
+    @GetMapping("/by-grade/{gradeId}")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getEmployeesByGrade(
+            @PathVariable Long gradeId) {
+
+        List<Employee> employees = employeeRepo.findByGradeIdAndIsActiveTrueAndIsDeletedFalse(gradeId);
+        List<Map<String, Object>> result = employees.stream().map(emp -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", emp.getId());
+            map.put("name", emp.getFirstName() + " " + (emp.getLastName() != null ? emp.getLastName() : ""));
+            map.put("employeeCode", emp.getEmployeeCode());
+            map.put("departmentName", emp.getDepartment() != null ? emp.getDepartment().getName() : null);
+            map.put("branchName", emp.getBranch() != null ? emp.getBranch().getName() : null);
+            map.put("gradeId", emp.getGrade() != null ? emp.getGrade().getId() : null);
+            map.put("gradeName", emp.getGrade() != null ? emp.getGrade().getName() : null);
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(
+                ResponseUtils.createSuccessResponse(result, new TypeReference<>() {})
+        );
     }
 
 }

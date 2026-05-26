@@ -77,6 +77,11 @@ public class Employee implements UserDetails {
     @JoinColumn(name = "manager_id")
     private Employee manager;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grade_id")
+    private EmployeeGrade grade;
+
+
     @OneToMany(mappedBy = "manager")
     private List<Employee> subordinates;
 
@@ -100,6 +105,16 @@ public class Employee implements UserDetails {
 
     private String createdBy;
     private String updatedBy;
+    // ADD these fields to your EXISTING Employee.java
+
+    @Column(name = "bank_account", length = 20)
+    private String bankAccount;
+
+    @Column(name = "uan", length = 12)
+    private String uan;
+
+    @Column(name = "pan", length = 10)
+    private String pan;
 
     // Lifecycle hooks
     @PrePersist
