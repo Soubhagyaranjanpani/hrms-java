@@ -7,9 +7,11 @@ import com.hrms.common.security.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 
@@ -36,6 +38,18 @@ public class EmployeeController {
     // =========================
 
 //    @PreAuthorize("hasRole('ADMIN')")
+
+    private final BulkUploadEmployeesUseCase bulkUploadEmployeesUseCase;
+
+    @PostMapping(value = "/bulk-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<String>> bulkUploadEmployees(
+            @RequestParam("file") MultipartFile file) {
+
+        return ResponseEntity.ok(
+                bulkUploadEmployeesUseCase.execute(file)
+        );
+    }
+
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<EmployeeProfileResponse>>> getAllEmployees(
@@ -131,4 +145,5 @@ public class EmployeeController {
             @PathVariable String username) {
         return ResponseEntity.ok(getEmployeeProfileUseCase.execute(username));
     }
+
 }
