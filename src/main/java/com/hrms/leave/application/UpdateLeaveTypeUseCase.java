@@ -23,6 +23,7 @@ public class UpdateLeaveTypeUseCase {
 
         type.setMaxDaysPerYear(request.getMaxDaysPerYear());
         type.setIsActive(request.getIsActive());
+        type.setName(request.getName());
 
         repo.save(type);
 

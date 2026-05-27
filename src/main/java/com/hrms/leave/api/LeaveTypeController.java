@@ -36,8 +36,10 @@ public class LeaveTypeController {
 
     // 🔥 GET ALL
     @GetMapping
-    public ResponseEntity<List<LeaveType>> getAll() {
-        return ResponseEntity.ok(getAllUseCase.execute());
+    public ResponseEntity<List<LeaveType>> getAll(
+            @RequestParam(defaultValue = "0") Integer flag) {
+
+        return ResponseEntity.ok(getAllUseCase.execute(flag));
     }
 
     // 🔥 ACTIVATE / DEACTIVATE

@@ -13,7 +13,12 @@ public class GetAllLeaveTypeUseCase {
 
     private final LeaveTypeRepository repo;
 
-    public List<LeaveType> execute() {
+    public List<LeaveType> execute(Integer flag) {
+
+        if (flag != null && flag == 1) {
+            return repo.findByIsActiveTrue();
+        }
+
         return repo.findAll();
     }
 }

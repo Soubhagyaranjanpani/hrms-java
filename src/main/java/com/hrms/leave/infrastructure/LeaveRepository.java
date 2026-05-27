@@ -98,4 +98,6 @@ WHERE (:status IS NULL OR l.status = :status)
             @Param("status") LeaveStatus status,
             Pageable pageable
     );
+
+    List<Leave> findByIsDeletedFalse();
 }

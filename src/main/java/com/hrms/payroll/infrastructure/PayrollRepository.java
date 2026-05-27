@@ -69,4 +69,6 @@ public interface PayrollRepository extends JpaRepository<PayrollRecord, Long> {
         ORDER BY totalNet DESC
     """, nativeQuery = true)
     List<Object[]> deptBreakdown(@Param("ym") String ym);
+
+    List<PayrollRecord> findByYearMonth(String yearMonth);
 }
