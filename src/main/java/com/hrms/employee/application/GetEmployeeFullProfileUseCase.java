@@ -1,5 +1,8 @@
 package com.hrms.employee.application;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.hrms.common.dto.response.ApiResponse;
+import com.hrms.common.utils.ResponseUtils;
 import com.hrms.document.infrastructure.EmployeeDocumentRepository;
 import com.hrms.employee.domain.*;
 import com.hrms.employee.dto.*;
@@ -9,6 +12,7 @@ import com.hrms.leave.infrastructure.LeaveBalanceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -103,5 +107,57 @@ public class GetEmployeeFullProfileUseCase {
         }
 
         return res;
+    }
+    public ApiResponse<List<EmployeeSkill>> getEmployeeSkills(
+            Long employeeId) {
+
+        Employee employee = employeeRepo
+                .findById(employeeId)
+                .orElse(null);
+
+        if (employee == null) {
+
+            return ResponseUtils.createFailureResponse(
+                    null,
+                    new TypeReference<>() {},
+                    "Employee not found",
+                    404
+            );
+        }
+
+        List<EmployeeSkill> skills =
+                skillRepo.findByEmployeeId(employeeId);
+
+        return ResponseUtils.createSuccessResponse(
+                skills,
+                new TypeReference<>() {},
+                "Employee skills fetched successfully"
+        );
+    }
+    public ApiResponse<List<EmployeeQualification>> getEmployeeQualifications(
+            Long employeeId) {
+
+        Employee employee = employeeRepo
+                .findById(employeeId)
+                .orElse(null);
+
+        if (employee == null) {
+
+            return ResponseUtils.createFailureResponse(
+                    null,
+                    new TypeReference<>() {},
+                    "Employee not found",
+                    404
+            );
+        }
+
+        List<EmployeeQualification> qualifications =
+                qualificationRepo.findByEmployee_Id(employeeId);
+
+        return ResponseUtils.createSuccessResponse(
+                qualifications,
+                new TypeReference<>() {},
+                "Employee qualifications fetched successfully"
+        );
     }
 }

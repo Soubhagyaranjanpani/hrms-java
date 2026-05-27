@@ -4,12 +4,15 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.utils.ResponseUtils;
 import com.hrms.employee.application.*;
+import com.hrms.employee.domain.EmployeeQualification;
+import com.hrms.employee.domain.EmployeeSkill;
 import com.hrms.employee.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/employee-profile")
@@ -117,5 +120,17 @@ public class EmployeeProfileController {
                 data,
                 new TypeReference<>() {}
         );
+    }
+    @GetMapping("/{employeeId}/skills")
+    public ApiResponse<List<EmployeeSkill>> getEmployeeSkills(
+            @PathVariable Long employeeId) {
+
+        return getEmployeeFullProfileUseCase.getEmployeeSkills(employeeId);
+    }
+    @GetMapping("/{employeeId}/qualifications")
+    public ApiResponse<List<EmployeeQualification>> getEmployeeQualifications(
+            @PathVariable Long employeeId) {
+
+        return getEmployeeFullProfileUseCase.getEmployeeQualifications(employeeId);
     }
 }
