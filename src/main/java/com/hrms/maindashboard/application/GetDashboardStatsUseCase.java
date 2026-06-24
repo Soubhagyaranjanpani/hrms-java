@@ -70,7 +70,7 @@ public class GetDashboardStatsUseCase {
                     DashboardStatsResponse.DeptHeadcount d = new DashboardStatsResponse.DeptHeadcount();
                     d.setDepartment(en.getKey());
                     d.setCount(en.getValue().intValue());
-                    d.setPct(totalEmp > 0 ? Math.round(en.getValue() * 1000.0 / totalEmp) / 10.0 : 0);
+                    d.setPct(totalEmp > 0 ? Math.round(en.getValue() * 1000.0 / totalEmp) / 10.0 : 0.0);
                     return d;
                 }).toList();
         r.setDeptHeadcounts(deptList);

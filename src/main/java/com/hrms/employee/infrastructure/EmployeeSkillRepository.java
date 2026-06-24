@@ -2,16 +2,16 @@ package com.hrms.employee.infrastructure;
 
 import com.hrms.employee.domain.EmployeeSkill;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 
 public interface EmployeeSkillRepository extends JpaRepository<EmployeeSkill, Long> {
 
     List<EmployeeSkill> findByEmployee_Id(Long employeeId);
+
+
     List<EmployeeSkill> findBySkillName(String skillName);
 
-
-    // used to show skills for an employee profile
-    List<EmployeeSkill> findByEmployeeId(Long employeeId);
+    // 🔥 Add this to support flag-based filtering
+    List<EmployeeSkill> findByFlag(Integer flag);
 
 }

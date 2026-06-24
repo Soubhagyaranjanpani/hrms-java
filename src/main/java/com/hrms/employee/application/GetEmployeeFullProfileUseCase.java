@@ -126,7 +126,8 @@ public class GetEmployeeFullProfileUseCase {
         }
 
         List<EmployeeSkill> skills =
-                skillRepo.findByEmployeeId(employeeId);
+
+        skillRepo.findByEmployee_Id(employeeId);
 
         return ResponseUtils.createSuccessResponse(
                 skills,

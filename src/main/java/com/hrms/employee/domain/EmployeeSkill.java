@@ -12,9 +12,13 @@ public class EmployeeSkill {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id")
     private Employee employee;
 
     private String skillName;
+
     private Integer proficiency;
+
+    private Integer flag = 0;
 }
