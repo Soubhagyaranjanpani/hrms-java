@@ -143,6 +143,15 @@ public class Employee implements UserDetails {
         return Collections.emptyList();
     }
 
+    // Add inside Employee.java, near the other getters
+    public String getFullName() {
+        if (lastName == null || lastName.trim().isEmpty()) {
+            return firstName;
+        }
+        return firstName + " " + lastName;
+    }
+
+
     @Override
     public String getUsername() {
         return email;
@@ -167,4 +176,6 @@ public class Employee implements UserDetails {
     public boolean isEnabled() {
         return isActive && !Boolean.TRUE.equals(isDeleted);
     }
+
+
 }

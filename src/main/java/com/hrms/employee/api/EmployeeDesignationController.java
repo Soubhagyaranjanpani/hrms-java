@@ -20,7 +20,6 @@ public class EmployeeDesignationController {
         return employeeDesignationService.create(request);
     }
 
-
     @GetMapping("/{id}")
     public EmployeeDesignationResponse getById(@PathVariable Long id) {
         return employeeDesignationService.getById(id);
@@ -32,11 +31,18 @@ public class EmployeeDesignationController {
         return employeeDesignationService.update(id, request);
     }
 
-    // ✅ Added flag parameter (default 0)
     @GetMapping
     public List<EmployeeDesignationResponse> getAll(
             @RequestParam(defaultValue = "0") Integer flag) {
         return employeeDesignationService.getAll(flag);
+    }
+
+    // ✅ Status change API (Active / Inactive) — explicit true/false
+    @PutMapping("/{id}/status")
+    public String changeStatus(@PathVariable Long id,
+                               @RequestParam Boolean active) {
+        employeeDesignationService.changeStatus(id, active);
+        return "Employee Designation status updated successfully";
     }
 
     @DeleteMapping("/{id}")
