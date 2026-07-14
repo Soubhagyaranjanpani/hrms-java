@@ -6,13 +6,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "service_book",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"employeeCode"}),
-                @UniqueConstraint(columnNames = {"serviceBookNo"})
-        }
-)
+@Table(name = "service_book")
 @Data
 public class ServiceBook {
 

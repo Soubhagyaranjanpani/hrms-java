@@ -17,26 +17,22 @@ public class ServiceBookController {
         this.service = service;
     }
 
-    // CREATE
     @PostMapping
     public ServiceBookResponse create(@RequestBody ServiceBookRequest request) {
         return service.create(request);
     }
 
-    // GET ALL (Fixed: Ab ye 0 aur 1 flag accept karega)
     @GetMapping
     public List<ServiceBookResponse> getAll(
             @RequestParam(name = "flag", defaultValue = "0") Integer flag) {
         return service.getAll(flag);
     }
 
-    // GET BY ID
     @GetMapping("/{id}")
     public ServiceBookResponse getById(@PathVariable Long id) {
         return service.getById(id);
     }
 
-    // UPDATE
     @PutMapping("/{id}")
     public ServiceBookResponse update(
             @PathVariable Long id,
@@ -44,7 +40,12 @@ public class ServiceBookController {
         return service.update(id, request);
     }
 
-    // DELETE
+    // NEW: Status Change API
+    @PutMapping("/status/{id}")
+    public ServiceBookResponse changeStatus(@PathVariable Long id) {
+        return service.changeStatus(id);
+    }
+
     @DeleteMapping("/{id}")
     public String delete(@PathVariable Long id) {
         service.delete(id);

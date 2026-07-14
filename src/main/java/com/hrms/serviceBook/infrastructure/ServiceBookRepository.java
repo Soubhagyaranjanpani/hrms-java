@@ -2,17 +2,23 @@ package com.hrms.serviceBook.infrastructure;
 
 import com.hrms.serviceBook.domain.ServiceBook;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
-@Repository
-public interface ServiceBookRepository
-        extends JpaRepository<ServiceBook, Long> {
+public interface ServiceBookRepository extends JpaRepository<ServiceBook, Long> {
 
-    // flag = 0 (Active data)
-    List<ServiceBook> findByIsActiveTrue();
+    boolean existsByEmployeeCode(String employeeCode);
 
-    // flag = 1 (Inactive/Deleted data)
-    List<ServiceBook> findByIsActiveFalse();
+    boolean existsByEmployeeCodeAndIdNot(String employeeCode, Long id);
+
+    List<ServiceBook> findByIsDeletedFalse();
+
+    List<ServiceBook> findByIsActiveTrueAndIsDeletedFalse();
+
+    Optional<ServiceBook> findByIdAndIsDeletedFalse(Long id);
+
+    @Query(value = "SELECT service_book_no FROM service_book ORDER BY id DESC LIMIT 1", nativeQuery = true)
+    String findLastServiceBookNo();
 }

@@ -9,5 +9,4 @@ public class ServiceBookRequest {
     private String employeeCode;
     private String department;
     private String designation;
-    private String serviceBookNo;
 }
