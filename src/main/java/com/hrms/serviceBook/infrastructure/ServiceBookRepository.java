@@ -1,6 +1,7 @@
 package com.hrms.serviceBook.infrastructure;
 
 import com.hrms.serviceBook.domain.ServiceBook;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -9,9 +10,9 @@ import java.util.Optional;
 
 public interface ServiceBookRepository extends JpaRepository<ServiceBook, Long> {
 
-    boolean existsByEmployeeCode(String employeeCode);
-
-    boolean existsByEmployeeCodeAndIdNot(String employeeCode, Long id);
+//    boolean existsByEmployeeCode(String employeeCode);
+//
+//    boolean existsByEmployeeCodeAndIdNot(String employeeCode, Long id);
 
     List<ServiceBook> findByIsDeletedFalse();
 
@@ -21,4 +22,6 @@ public interface ServiceBookRepository extends JpaRepository<ServiceBook, Long> 
 
     @Query(value = "SELECT service_book_no FROM service_book ORDER BY id DESC LIMIT 1", nativeQuery = true)
     String findLastServiceBookNo();
+
+    boolean existsByEmployeeId(@NotNull(message = "employeeId is required") Long employeeId);
 }

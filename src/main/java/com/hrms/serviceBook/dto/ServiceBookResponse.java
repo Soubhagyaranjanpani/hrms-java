@@ -10,5 +10,6 @@ public class ServiceBookResponse {
     private String department;
     private String designation;
     private String serviceBookNo;
+    private  String serviceBookName;
     private Boolean isActive;
 }

@@ -1,12 +1,13 @@
 package com.hrms.serviceBook.dto;
 
 
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 public class ServiceBookRequest {
-    private String employeeName;
-    private String employeeCode;
-    private String department;
-    private String designation;
+    @NotNull(message = "employeeId is required")
+    private Long employeeId;
+
+    private String serviceName;
 }

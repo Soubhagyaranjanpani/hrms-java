@@ -33,11 +33,11 @@ public class ServiceBookController {
         return service.getById(id);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id}/{name}")
     public ServiceBookResponse update(
             @PathVariable Long id,
-            @RequestBody ServiceBookRequest request) {
-        return service.update(id, request);
+            @PathVariable String name) {
+        return service.update(id, name);
     }
 
     // NEW: Status Change API
