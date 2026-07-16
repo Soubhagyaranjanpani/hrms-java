@@ -1,46 +1,53 @@
 package com.hrms.employee.api;
 
-import com.hrms.employee.application.AddSkillUseCase;
-import com.hrms.employee.dto.SkillRequest;
+import com.hrms.employee.application.EmployeeSkillService;
 import com.hrms.employee.dto.SkillDto;
+import com.hrms.employee.dto.SkillRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
+
 @RestController
-@RequestMapping("/api/employee-skill")
+@RequestMapping("/employee-skill")
 @RequiredArgsConstructor
 public class EmployeeSkillController {
 
-    private final AddSkillUseCase addSkillUseCase;
-
+    private final EmployeeSkillService employeeSkillService;
 
     @PostMapping
-    public String addSkill(@RequestBody SkillRequest request, Principal principal) {
-        return addSkillUseCase.execute(request, principal.getName());
+    public SkillDto create(@RequestBody SkillRequest request) {
+        return employeeSkillService.create(request);
     }
 
-    @GetMapping
-    public List<SkillDto> getAll(@RequestParam(defaultValue = "0") Integer flag) {
-        return addSkillUseCase.execute(flag);
-    }
-
-    @GetMapping("/employee/{id}")
-    public List<SkillDto> getByEmployee(@PathVariable Long id) {
-        return addSkillUseCase.execute(id);
+    @GetMapping("/{id}")
+    public SkillDto getById(@PathVariable Long id) {
+        return employeeSkillService.getById(id);
     }
 
     @PutMapping("/{id}")
     public SkillDto update(@PathVariable Long id,
-                           @RequestBody SkillRequest request,
-                           @RequestParam String user) {
-        return addSkillUseCase.execute(id, request, user);
+                           @RequestBody SkillRequest request) {
+        return employeeSkillService.update(id, request);
+    }
+
+    @GetMapping
+    public List<SkillDto> getAll(
+            @RequestParam(defaultValue = "0") Integer flag) {
+        return employeeSkillService.getAll(flag);
+    }
+
+    // ✅ Status change API (Active / Inactive) — explicit true/false
+    @PutMapping("/{id}/status")
+    public String changeStatus(@PathVariable Long id,
+                               @RequestParam Boolean active) {
+        employeeSkillService.changeStatus(id, active);
+        return "Employee Skill status updated successfully";
     }
 
     @DeleteMapping("/{id}")
-    public String delete(@PathVariable Long id,
-                         @RequestParam String user) {
-        return addSkillUseCase.executeDelete(id, user);
+    public String delete(@PathVariable Long id) {
+        employeeSkillService.delete(id);
+        return "Employee Skill Deleted Successfully";
     }
 }

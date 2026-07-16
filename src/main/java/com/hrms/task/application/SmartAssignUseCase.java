@@ -15,13 +15,9 @@ public class SmartAssignUseCase {
     private final EmployeeSkillRepository skillRepo;
     private final TaskRepository taskRepo;
 
-    /**
-     * Returns the employee ID of the best match for the required skill,
-     * picking the one with the fewest active tasks (load balancing).
-     */
     public Long assign(String requiredSkill) {
 
-        return skillRepo.findBySkillName(requiredSkill)
+        return skillRepo.findBySkill_Name(requiredSkill)
                 .stream()
                 .map(s -> s.getEmployee())
                 .min(Comparator.comparing(emp ->

@@ -21,7 +21,7 @@ public class EmployeeProfileController {
 
     private final GetEmployeeFullProfileUseCase getEmployeeFullProfileUseCase;
     private final AddQualificationUseCase addQualificationUseCase;
-    private final AddSkillUseCase addSkillUseCase;
+    private final EmployeeSkillService employeeSkillService;
     private final AddTrainingUseCase addTrainingUseCase;
     private final GetEmployeeServiceBookUseCase getEmployeeServiceBookUseCase;
     private final PromoteEmployeeUseCase promoteEmployeeUseCase;
@@ -69,9 +69,9 @@ public class EmployeeProfileController {
     // 🔥 ADD SKILL
     @Operation(summary = "Add skill")
     @PostMapping("/skill")
-    public ApiResponse<String> addSkill(@RequestBody SkillRequest req, Principal p) {
+    public ApiResponse<SkillDto> addSkill(@RequestBody SkillRequest req) {
 
-        String result = addSkillUseCase.execute(req, p.getName());
+        SkillDto result = employeeSkillService.create(req);
 
         return ResponseUtils.createSuccessResponse(
                 result,
@@ -121,12 +121,19 @@ public class EmployeeProfileController {
                 new TypeReference<>() {}
         );
     }
+
     @GetMapping("/{employeeId}/skills")
-    public ApiResponse<List<EmployeeSkill>> getEmployeeSkills(
+    public ApiResponse<List<SkillDto>> getEmployeeSkills(
             @PathVariable Long employeeId) {
 
-        return getEmployeeFullProfileUseCase.getEmployeeSkills(employeeId);
+        List<SkillDto> skills = employeeSkillService.getByEmployee(employeeId);
+
+        return ResponseUtils.createSuccessResponse(
+                skills,
+                new TypeReference<>() {}
+        );
     }
+
     @GetMapping("/{employeeId}/qualifications")
     public ApiResponse<List<EmployeeQualification>> getEmployeeQualifications(
             @PathVariable Long employeeId) {
