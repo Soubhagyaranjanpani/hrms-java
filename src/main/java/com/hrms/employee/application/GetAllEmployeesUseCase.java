@@ -3,17 +3,26 @@ package com.hrms.employee.application;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.utils.ResponseUtils;
 import com.hrms.employee.domain.Employee;
+import com.hrms.employee.domain.EmployeeDesignation;
 import com.hrms.employee.dto.EmployeeProfileResponse;
+import com.hrms.employee.infrastructure.EmployeeDesignationRepository;
 import com.hrms.employee.infrastructure.EmployeeRepository;
+import com.hrms.serviceBook.domain.ServiceBook;
+import com.hrms.serviceBook.infrastructure.ServiceBookRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class GetAllEmployeesUseCase {
 
     private final EmployeeRepository employeeRepository;
+    private final EmployeeDesignationRepository employeeDesignationRepository;
+    private final ServiceBookRepository serviceBookRepository;
+
 
     public ApiResponse<Page<EmployeeProfileResponse>> execute(
             String name,
@@ -59,6 +68,22 @@ public class GetAllEmployeesUseCase {
         res.setBankAccount(emp.getBankAccount());
         res.setUan(emp.getUan());
         res.setPan(emp.getPan());
+
+        Optional<EmployeeDesignation> designation =
+                employeeDesignationRepository
+                        .findFirstByEmployee_IdAndIsActiveTrueAndIsDeletedFalse(emp.getId());
+
+        designation.ifPresent(d ->
+                res.setDesignation(d.getDesignation().getName())
+        );
+
+        Optional<ServiceBook> serviceBook =
+                serviceBookRepository.findByEmployeeIdAndIsDeletedFalse(emp.getId());
+
+        serviceBook.ifPresent(sb ->
+                res.setServiceBookNo(sb.getServiceBookNo())
+        );
+
 
 
         return res;

@@ -24,4 +24,6 @@ public interface ServiceBookRepository extends JpaRepository<ServiceBook, Long> 
     String findLastServiceBookNo();
 
     boolean existsByEmployeeId(@NotNull(message = "employeeId is required") Long employeeId);
+
+    Optional<ServiceBook> findByEmployeeIdAndIsDeletedFalse(Long id);
 }

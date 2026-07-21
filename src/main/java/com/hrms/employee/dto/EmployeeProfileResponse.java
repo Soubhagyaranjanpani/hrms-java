@@ -27,4 +27,6 @@ public class EmployeeProfileResponse {
     private String bankAccount;
     private String uan;
     private String pan;
+    private String designation;
+    private String serviceBookNo;
 }
