@@ -139,18 +139,38 @@ public class ServiceBookService {
     }
 
     // ========================= MAP RESPONSE =========================
+//    private ServiceBookResponse mapToResponse(ServiceBook entity) {
+//
+//        ServiceBookResponse response = new ServiceBookResponse();
+//
+//        response.setId(entity.getId());
+//        response.setEmployeeName(entity.getEmployee().getFullName());
+//        response.setEmployeeCode(entity.getEmployee().getEmployeeCode());
+//        response.setDepartment(entity.getEmployee().getDepartment().getName());
+//        response.setServiceBookNo(entity.getServiceBookNo());
+//        response.setServiceBookName(entity.getServiceBookName());
+//        response.setIsActive(entity.getIsActive());
+//
+//        return response;
+//    }
+
+
     private ServiceBookResponse mapToResponse(ServiceBook entity) {
 
         ServiceBookResponse response = new ServiceBookResponse();
-
         response.setId(entity.getId());
-        response.setEmployeeName(entity.getEmployee().getFullName());
-        response.setEmployeeCode(entity.getEmployee().getEmployeeCode());
-        response.setDepartment(entity.getEmployee().getDepartment().getName());
-//        response.setDesignation(entity.getEmployee().get);
         response.setServiceBookNo(entity.getServiceBookNo());
         response.setServiceBookName(entity.getServiceBookName());
         response.setIsActive(entity.getIsActive());
+
+        Employee employee = entity.getEmployee();
+        if (employee != null) {
+            response.setEmployeeName(employee.getFullName());
+            response.setEmployeeCode(employee.getEmployeeCode());
+            response.setDepartment(
+                    employee.getDepartment() != null ? employee.getDepartment().getName() : null
+            );
+        }
 
         return response;
     }

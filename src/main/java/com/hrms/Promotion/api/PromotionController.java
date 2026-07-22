@@ -303,13 +303,13 @@ public class PromotionController {
         return ResponseUtils.createSuccessResponse(historyUseCase.execute(empId), new TypeReference<>() {});
     }
 
-    @PostMapping
+    @PostMapping("/create")
     @PreAuthorize("hasRole('HR') or hasRole('Admin')")
     public ApiResponse<PromotionRecordResponse> create(@RequestBody CreatePromotionRequest req) {
         return ResponseUtils.createSuccessResponse(createUseCase.execute(req), new TypeReference<>() {});
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{id}/update")
     @PreAuthorize("hasRole('HR') or hasRole('Admin')")
     public ApiResponse<PromotionRecordResponse> update(
             @PathVariable Long id,
@@ -353,4 +353,5 @@ public class PromotionController {
         return ResponseUtils.createSuccessResponse(
                 savePromotionUseCase.execute(request), new TypeReference<>() {});
     }
+
 }
