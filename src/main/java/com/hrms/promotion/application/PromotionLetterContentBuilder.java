@@ -1,4 +1,4 @@
-package com.hrms.Promotion.application;
+package com.hrms.promotion.application;
 
 public class PromotionLetterContentBuilder {
 }
