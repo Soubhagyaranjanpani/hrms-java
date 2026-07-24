@@ -1,8 +1,8 @@
 // File: com/hrms/confirmation/application/DownloadConfirmationDocumentUseCase.java
-package com.hrms.confirmation.application;
+package com.hrms.Confirmation.application;
 
-import com.hrms.confirmation.domain.ConfirmationRecord;
-import com.hrms.confirmation.infrastructure.ConfirmationRepository;
+import com.hrms.Confirmation.domain.ConfirmationRecord;
+import com.hrms.Confirmation.infrastructure.ConfirmationRepository;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 public class DownloadConfirmationDocumentUseCase {
 
     private final ConfirmationRepository confirmationRepo;
-    private final ConfirmationDocumentStorageService storageService;
+    private final com.hrms.Confirmation.application.ConfirmationDocumentStorageService storageService;
 
     public DocumentFile execute(Long id) throws Exception {
         ConfirmationRecord r = confirmationRepo.findById(id)

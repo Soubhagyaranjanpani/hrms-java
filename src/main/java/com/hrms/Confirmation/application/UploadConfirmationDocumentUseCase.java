@@ -1,8 +1,9 @@
 // File: com/hrms/confirmation/application/UploadConfirmationDocumentUseCase.java
-package com.hrms.confirmation.application;
+package com.hrms.Confirmation.application;
 
-import com.hrms.confirmation.domain.ConfirmationRecord;
-import com.hrms.confirmation.infrastructure.ConfirmationRepository;
+import com.hrms.Confirmation.application.ConfirmationDocumentStorageService;
+import com.hrms.Confirmation.domain.ConfirmationRecord;
+import com.hrms.Confirmation.infrastructure.ConfirmationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

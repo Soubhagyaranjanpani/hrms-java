@@ -1,5 +1,6 @@
-package com.hrms.confirmation.dto;
+package com.hrms.Confirmation.dto;
 
+import com.hrms.Confirmation.dto.ConfirmationRecordResponse;
 import lombok.Getter;
 import lombok.Setter;
 

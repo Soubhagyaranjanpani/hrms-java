@@ -1,9 +1,10 @@
-package com.hrms.confirmation.api;
+package com.hrms.Confirmation.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.hrms.confirmation.application.*;
-import com.hrms.confirmation.dto.*;
-import com.hrms.confirmation.infrastructure.ConfirmationRepository;
+import com.hrms.Confirmation.application.*;
+import com.hrms.Confirmation.application.*;
+import com.hrms.Confirmation.dto.*;
+import com.hrms.Confirmation.infrastructure.ConfirmationRepository;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.utils.ResponseUtils;
 import lombok.RequiredArgsConstructor;

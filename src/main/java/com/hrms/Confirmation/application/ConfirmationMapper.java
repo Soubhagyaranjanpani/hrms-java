@@ -1,7 +1,7 @@
-package com.hrms.confirmation.application;
+package com.hrms.Confirmation.application;
 
-import com.hrms.confirmation.domain.ConfirmationRecord;
-import com.hrms.confirmation.dto.ConfirmationRecordResponse;
+import com.hrms.Confirmation.domain.ConfirmationRecord;
+import com.hrms.Confirmation.dto.ConfirmationRecordResponse;
 import org.springframework.stereotype.Component;
 
 @Component

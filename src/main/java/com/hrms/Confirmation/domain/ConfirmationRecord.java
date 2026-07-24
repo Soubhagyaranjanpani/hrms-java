@@ -1,4 +1,4 @@
-package com.hrms.confirmation.domain;
+package com.hrms.Confirmation.domain;
 
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.domain.EmployeeDesignation;

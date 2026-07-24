@@ -1,6 +1,6 @@
-package com.hrms.confirmation.infrastructure;
+package com.hrms.Confirmation.infrastructure;
 
-import com.hrms.confirmation.domain.ConfirmationRecord;
+import com.hrms.Confirmation.domain.ConfirmationRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

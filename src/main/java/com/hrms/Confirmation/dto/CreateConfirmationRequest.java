@@ -1,4 +1,4 @@
-package com.hrms.confirmation.dto;
+package com.hrms.Confirmation.dto;
 
 import lombok.Getter;
 import lombok.Setter;

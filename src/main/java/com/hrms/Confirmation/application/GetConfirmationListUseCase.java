@@ -1,9 +1,8 @@
-package com.hrms.confirmation.application;
-
-import com.hrms.confirmation.domain.ConfirmationRecord;
-import com.hrms.confirmation.dto.ConfirmationPageResponse;
-import com.hrms.confirmation.dto.ConfirmationRecordResponse;
-import com.hrms.confirmation.infrastructure.ConfirmationRepository;
+package com.hrms.Confirmation.application;
+import com.hrms.Confirmation.domain.ConfirmationRecord;
+import com.hrms.Confirmation.dto.ConfirmationPageResponse;
+import com.hrms.Confirmation.dto.ConfirmationRecordResponse;
+import com.hrms.Confirmation.infrastructure.ConfirmationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

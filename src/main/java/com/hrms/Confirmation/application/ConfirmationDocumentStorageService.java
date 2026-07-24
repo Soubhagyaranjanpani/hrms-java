@@ -1,4 +1,4 @@
-package com.hrms.confirmation.application;
+package com.hrms.Confirmation.application;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
