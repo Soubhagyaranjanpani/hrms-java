@@ -56,6 +56,7 @@ public class CreatePayRevisionUseCase {
         // ── Reason (master table) ──
         PayRevisionReason reason = reasonRepo.findById(req.getReasonId())
                 .orElseThrow(() -> new RuntimeException("Pay revision reason not found"));
+
         r.setReason(reason);
 
         r.setEffectiveDate(req.getEffectiveDate() != null ? req.getEffectiveDate() : LocalDate.now());
