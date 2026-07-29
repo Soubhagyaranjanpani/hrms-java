@@ -1,5 +1,6 @@
 package com.hrms.payrevision.application;
 
+import com.hrms.master.domain.RevisionReason;
 import com.hrms.payrevision.domain.PayRevisionRecord;
 import com.hrms.payrevision.dto.PayRevisionRecordResponse;
 import org.springframework.stereotype.Component;

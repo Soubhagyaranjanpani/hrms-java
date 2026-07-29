@@ -1,7 +1,8 @@
 package com.hrms.payrevision.application;
 
+import com.hrms.master.domain.RevisionReason;
+import com.hrms.master.infrastructure.RevisionReasonRepository;
 import com.hrms.payrevision.dto.PayRevisionReasonResponse;
-import com.hrms.payrevision.infrastructure.PayRevisionReasonRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,10 +12,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GetPayRevisionReasonsUseCase {
 
-    private final PayRevisionReasonRepository repo;
+    private final RevisionReasonRepository reasonRepo;
 
     public List<PayRevisionReasonResponse> execute() {
-        return repo.findByIsActiveTrue().stream().map(reason -> {
+        return reasonRepo.findByIsActiveTrue().stream().map(reason -> {
             PayRevisionReasonResponse res = new PayRevisionReasonResponse();
             res.setId(reason.getId());
             res.setName(reason.getName());

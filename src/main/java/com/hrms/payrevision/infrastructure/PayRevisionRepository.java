@@ -17,14 +17,13 @@ public interface PayRevisionRepository extends JpaRepository<PayRevisionRecord, 
         SELECT p FROM PayRevisionRecord p
         WHERE p.isDeleted = false AND (
             LOWER(p.payRevisionOrderNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR
-            LOWER(CAST(p.reason AS string)) LIKE LOWER(CONCAT('%', :search, '%')) OR
+            LOWER(p.reason.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
             LOWER(p.remarks) LIKE LOWER(CONCAT('%', :search, '%'))
         )
         """)
     Page<PayRevisionRecord> searchByOrderNumberOrReasonOrRemarks(
             @Param("search") String search, Pageable pageable);
 
-    // ── Active/Inactive filtering (mirrors the other modules' "flag" endpoints) ──
     Page<PayRevisionRecord> findByIsActiveAndIsDeletedFalse(Boolean isActive, Pageable pageable);
 
     List<PayRevisionRecord> findByIsActiveAndIsDeletedFalse(Boolean isActive);
@@ -33,7 +32,7 @@ public interface PayRevisionRepository extends JpaRepository<PayRevisionRecord, 
         SELECT p FROM PayRevisionRecord p
         WHERE p.isDeleted = false AND p.isActive = :isActive AND (
             LOWER(p.payRevisionOrderNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR
-            LOWER(CAST(p.reason AS string)) LIKE LOWER(CONCAT('%', :search, '%')) OR
+            LOWER(p.reason.name) LIKE LOWER(CONCAT('%', :search, '%')) OR
             LOWER(p.remarks) LIKE LOWER(CONCAT('%', :search, '%'))
         )
         """)

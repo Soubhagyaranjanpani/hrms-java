@@ -1,6 +1,7 @@
 package com.hrms.payrevision.domain;
 
 import com.hrms.employee.domain.Employee;
+import com.hrms.master.domain.RevisionReason;  // ← Master se import
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,7 +29,6 @@ public class PayRevisionRecord {
     @Column(name = "effective_date")
     private LocalDate effectiveDate;
 
-    // ── Previous / Revised pay scale (min–max band, as shown in the UI: "₹50,000 – ₹80,000") ──
     @Column(name = "previous_pay_scale_min")
     private Double previousPayScaleMin;
 
@@ -41,14 +41,13 @@ public class PayRevisionRecord {
     @Column(name = "revised_pay_scale_max")
     private Double revisedPayScaleMax;
 
-    // ── Computed increment (based on the min values, matching the UI's displayed figures) ──
     private Double incrementAmount = 0.0;
     private Double incrementPercent = 0.0;
 
-    // ── Reason: master-table FK, mirrors PromotionType on PromotionRecord ──
+    // ✅ Master RevisionReason use karo
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reason", nullable = false)
-    private PayRevisionReason reason;
+    private RevisionReason reason;  // ← Master package ka
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

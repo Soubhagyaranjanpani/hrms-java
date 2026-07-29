@@ -2,11 +2,11 @@ package com.hrms.payrevision.application;
 
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
-import com.hrms.payrevision.domain.PayRevisionReason;
+import com.hrms.master.domain.RevisionReason;  // ← Master se import
+import com.hrms.master.infrastructure.RevisionReasonRepository;  // ← Master repository
 import com.hrms.payrevision.domain.PayRevisionRecord;
 import com.hrms.payrevision.dto.CreatePayRevisionRequest;
 import com.hrms.payrevision.dto.PayRevisionRecordResponse;
-import com.hrms.payrevision.infrastructure.PayRevisionReasonRepository;
 import com.hrms.payrevision.infrastructure.PayRevisionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +20,7 @@ public class CreatePayRevisionUseCase {
 
     private final PayRevisionRepository payRevisionRepo;
     private final EmployeeRepository empRepo;
-    private final PayRevisionReasonRepository reasonRepo;
+    private final RevisionReasonRepository reasonRepo;  // ← Master repository
     private final PayRevisionMapper mapper;
     private final PdfPayRevisionLetterGenerator letterGenerator;
     private final PayRevisionDocumentStorageService storageService;
@@ -33,9 +33,6 @@ public class CreatePayRevisionUseCase {
         r.setEmployee(emp);
         r.setPayRevisionOrderNumber(req.getPayRevisionOrderNumber());
 
-        // ── Previous pay scale ──
-        // If not supplied explicitly, fall back to the employee's most recent pay-revision
-        // record's revised pay scale (so each revision chains onto the last one).
         Double prevMin = req.getPreviousPayScaleMin();
         Double prevMax = req.getPreviousPayScaleMax();
         if (prevMin == null || prevMax == null) {
@@ -53,8 +50,8 @@ public class CreatePayRevisionUseCase {
         r.setRevisedPayScaleMin(req.getRevisedPayScaleMin());
         r.setRevisedPayScaleMax(req.getRevisedPayScaleMax());
 
-        // ── Reason (master table) ──
-        PayRevisionReason reason = reasonRepo.findById(req.getReasonId())
+        // ✅ Master RevisionReason se find karo
+        RevisionReason reason = reasonRepo.findById(req.getReasonId())
                 .orElseThrow(() -> new RuntimeException("Pay revision reason not found"));
 
         r.setReason(reason);
@@ -67,7 +64,6 @@ public class CreatePayRevisionUseCase {
 
         PayRevisionRecord saved = payRevisionRepo.save(r);
 
-        // Auto-generate the pay revision letter and persist its path/name on the record
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
