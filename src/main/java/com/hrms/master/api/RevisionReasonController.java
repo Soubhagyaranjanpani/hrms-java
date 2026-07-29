@@ -1,10 +1,14 @@
 package com.hrms.master.api;
 
-import com.hrms.master.application.RevisionReasonService;
-import com.hrms.master.dto.RevisionReasonRequest;
+
+import com.hrms.common.dto.response.ApiResponse;
+import com.hrms.common.security.DefaultResponse;
+import com.hrms.master.application.*;
+import com.hrms.master.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -12,25 +16,32 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RevisionReasonController {
 
-    private final RevisionReasonService service;
-
-    @GetMapping("/list")
-    public ResponseEntity<List<RevisionReasonRequest>> list() {
-        return ResponseEntity.ok(service.getAll());
-    }
+    private final CreateRevisionReasonUseCase createUseCase;
+    private final UpdateRevisionReasonUseCase updateUseCase;
+    private final ChangeRevisionReasonStatusUseCase changeStatusUseCase;
+    private final GetRevisionReasonUseCase getUseCase;
 
     @PostMapping("/create")
-    public ResponseEntity<RevisionReasonRequest> create(@RequestBody RevisionReasonRequest dto) {
-        return ResponseEntity.ok(service.create(dto));
+    public ResponseEntity<ApiResponse<DefaultResponse>> create(
+            @RequestBody RevisionReasonCreateReq request) {
+        return ResponseEntity.ok(createUseCase.execute(request));
     }
 
     @PutMapping("/update")
-    public ResponseEntity<RevisionReasonRequest> update(@RequestBody RevisionReasonRequest dto) {
-        return ResponseEntity.ok(service.update(dto));
+    public ResponseEntity<ApiResponse<DefaultResponse>> update(
+            @RequestBody RevisionReasonUpdateReq request) {
+        return ResponseEntity.ok(updateUseCase.execute(request));
     }
 
     @PutMapping("/status/{id}")
-    public ResponseEntity<RevisionReasonRequest> updateStatus(@PathVariable Long id) {
-        return ResponseEntity.ok(service.updateStatus(id));
+    public ResponseEntity<ApiResponse<DefaultResponse>> changeStatus(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(changeStatusUseCase.execute(id));
+    }
+
+    @GetMapping("/list")
+    public ResponseEntity<ApiResponse<List<RevisionReasonResponse>>> getAll(
+            @RequestParam(defaultValue = "0") Integer flag) {
+        return ResponseEntity.ok(getUseCase.execute(flag));
     }
 }
