@@ -30,8 +30,8 @@ public class AppointmentMapper {
             r.setAppointmentAuthorityDesignation("—");
         }
 
-        r.setAppointmentType(a.getAppointmentType());
-        r.setEmploymentType(a.getEmploymentType());
+        r.setAppointmentType(a.getAppointmentType() != null ? a.getAppointmentType().getAppointmentType() : "—");
+        r.setEmploymentType(a.getEmploymentType() != null ? a.getEmploymentType().getName() : "—");
 
         r.setDesignation(a.getInitialDesignation() != null ? a.getInitialDesignation().getName() : "—");
         r.setDepartment(a.getInitialDepartment() != null ? a.getInitialDepartment().getName() : "—");
@@ -52,5 +52,3 @@ public class AppointmentMapper {
         return r;
     }
 }
-
-

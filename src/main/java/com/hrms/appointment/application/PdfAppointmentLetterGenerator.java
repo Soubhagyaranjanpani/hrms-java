@@ -3,6 +3,8 @@ package com.hrms.appointment.application;
 
 import com.hrms.appointment.domain.AppointmentRecord;
 import com.hrms.employee.domain.EmployeeDesignation;
+import com.hrms.employment_type.domain.EmploymentType;
+import com.hrms.master.domain.AppointmentType;
 import org.apache.pdfbox.pdmodel.*;
 import org.apache.pdfbox.pdmodel.font.*;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -168,8 +170,8 @@ public class PdfAppointmentLetterGenerator {
                         {"Designation", safe(r.getInitialDesignation() != null ? r.getInitialDesignation().getName() : null)},
                         {"Department", deptName},
                         {"Branch", branchName},
-                        {"Appointment Type", safe(r.getAppointmentType())},
-                        {"Employment Type", safe(r.getEmploymentType())},
+                        {"Appointment Type", safeAppointmentType(r.getAppointmentType())},
+                        {"Employment Type", safeEmploymentType(r.getEmploymentType())},
                         {"Joining Date", r.getJoiningDate() != null ? r.getJoiningDate().format(DATE_FORMAT) : "—"},
                         {"Probation Period", r.getProbationPeriodMonths() != null ? r.getProbationPeriodMonths() + " months" : "—"},
                         {"Confirmation Due Date", r.getConfirmationDueDate() != null ? r.getConfirmationDueDate().format(DATE_FORMAT) : "—"},
@@ -303,6 +305,14 @@ public class PdfAppointmentLetterGenerator {
             currentY -= lineHeight;
         }
         return currentY;
+    }
+
+    private String safeAppointmentType(AppointmentType t) {
+        return t != null ? safe(t.getAppointmentType()) : "—";
+    }
+
+    private String safeEmploymentType(EmploymentType t) {
+        return t != null ? safe(t.getName()) : "—";
     }
 
     private String safe(String str) {

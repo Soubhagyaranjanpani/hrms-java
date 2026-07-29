@@ -2,6 +2,8 @@ package com.hrms.appointment.domain;
 
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.domain.EmployeeDesignation;
+import com.hrms.employment_type.domain.EmploymentType;
+import com.hrms.master.domain.AppointmentType;
 import com.hrms.master.domain.Branch;
 import com.hrms.master.domain.Department;
 import com.hrms.master.domain.Designation;
@@ -37,15 +39,14 @@ public class AppointmentRecord {
     @JoinColumn(name = "appointment_authority", nullable = false)
     private EmployeeDesignation appointmentAuthority;
 
-    // ── Type dropdowns ──
-    // Stored as plain strings since (unlike PromotionType) there is no dedicated
-    // master table shown in the UI for these. Swap to an enum or a master-table
-    // FK the same way PromotionType/EmployeeGrade are used if you add one later.
-    @Column(name = "appointment_type", length = 30)
-    private String appointmentType; // Permanent / Contract / Temporary
+    // ── Type dropdowns (now backed by master tables) ──
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "appointment_type_id", nullable = false)
+    private AppointmentType appointmentType;
 
-    @Column(name = "employment_type", length = 30)
-    private String employmentType; // Full-Time / Part-Time / Contractual
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employment_type_id", nullable = false)
+    private EmploymentType employmentType;
 
     // ── Initial posting ──
     @ManyToOne(fetch = FetchType.LAZY)
@@ -90,7 +91,6 @@ public class AppointmentRecord {
 
     private String processedBy;
 
-    /** Recomputes confirmationDueDate from joiningDate + probationPeriodMonths. */
     public void compute() {
         if (joiningDate != null && probationPeriodMonths != null) {
             this.confirmationDueDate = joiningDate.plusMonths(probationPeriodMonths);

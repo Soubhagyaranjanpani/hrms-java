@@ -16,8 +16,8 @@ public class CreateAppointmentRequest {
 
     private Long appointmentAuthorityId;
 
-    private String appointmentType;   // Permanent / Contract / Temporary
-    private String employmentType;    // Full-Time / Part-Time / Contractual
+    private Long appointmentTypeId;   // FK -> appointment_type.id
+    private Long employmentTypeId;    // FK -> employment_types.id
 
     private Long initialDesignationId;
     private Long initialDepartmentId;

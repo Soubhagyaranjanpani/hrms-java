@@ -8,9 +8,13 @@ import com.hrms.employee.domain.Employee;
 import com.hrms.employee.domain.EmployeeDesignation;
 import com.hrms.employee.infrastructure.EmployeeDesignationRepository;
 import com.hrms.employee.infrastructure.EmployeeRepository;
+import com.hrms.employment_type.domain.EmploymentType;
+import com.hrms.employment_type.infrastructure.EmploymentTypeRepository;
+import com.hrms.master.domain.AppointmentType;
 import com.hrms.master.domain.Branch;
 import com.hrms.master.domain.Department;
 import com.hrms.master.domain.Designation;
+import com.hrms.master.infrastructure.AppointmentTypeRepository;
 import com.hrms.master.infrastructure.BranchRepository;
 import com.hrms.master.infrastructure.DepartmentRepository;
 import com.hrms.master.infrastructure.DesignationRepository;
@@ -29,6 +33,8 @@ public class CreateAppointmentUseCase {
     private final DepartmentRepository departmentRepo;
     private final BranchRepository branchRepo;
     private final EmployeeDesignationRepository employeeDesignationRepo;
+    private final AppointmentTypeRepository appointmentTypeRepo;
+    private final EmploymentTypeRepository employmentTypeRepo;
     private final AppointmentMapper mapper;
     private final PdfAppointmentLetterGenerator letterGenerator;
     private final AppointmentDocumentStorageService storageService;
@@ -56,8 +62,14 @@ public class CreateAppointmentUseCase {
                 .orElseThrow(() -> new RuntimeException("Initial branch not found"));
         r.setInitialBranch(initialBranch);
 
-        r.setAppointmentType(req.getAppointmentType());
-        r.setEmploymentType(req.getEmploymentType());
+        // ── Appointment type / Employment type (resolved from master tables) ──
+        AppointmentType appointmentType = appointmentTypeRepo.findById(req.getAppointmentTypeId())
+                .orElseThrow(() -> new RuntimeException("Appointment type not found"));
+        r.setAppointmentType(appointmentType);
+
+        EmploymentType employmentType = employmentTypeRepo.findById(req.getEmploymentTypeId())
+                .orElseThrow(() -> new RuntimeException("Employment type not found"));
+        r.setEmploymentType(employmentType);
 
         // ── Dates / probation ──
         LocalDate date = req.getAppointmentDate() != null ? req.getAppointmentDate() : LocalDate.now();
@@ -78,10 +90,6 @@ public class CreateAppointmentUseCase {
         AppointmentRecord saved = appointmentRepo.save(r);
 
         // Update the employee's live department/branch to reflect this appointment immediately.
-        // NOTE: if the Employee's *current designation* also needs to be set from this appointment,
-        // that goes through the EmployeeDesignation join entity (as findFirstByEmployee_IdAndIsActiveTrueAndIsDeletedFalse
-        // is used elsewhere to read it) — wire that creation in here once you share that entity's fields,
-        // since guessing its columns risks breaking the build.
         emp.setDepartment(initialDept);
         emp.setBranch(initialBranch);
         empRepo.save(emp);
@@ -101,5 +109,3 @@ public class CreateAppointmentUseCase {
         return mapper.toResponse(saved);
     }
 }
-
-

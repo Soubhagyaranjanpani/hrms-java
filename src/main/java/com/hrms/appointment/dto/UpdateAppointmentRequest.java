@@ -12,8 +12,8 @@ public class UpdateAppointmentRequest {
     private String appointmentOrderNumber;
     private LocalDate appointmentDate;
 
-    private String appointmentType;
-    private String employmentType;
+    private Long appointmentTypeId;
+    private Long employmentTypeId;
 
     private LocalDate joiningDate;
     private Integer probationPeriodMonths;
