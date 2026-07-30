@@ -1,4 +1,3 @@
-// File: com/hrms/transfer/application/PdfTransferLetterGenerator.java
 package com.hrms.transfer.application;
 
 import com.hrms.transfer.domain.TransferRecord;
@@ -147,15 +146,28 @@ public class PdfTransferLetterGenerator {
 
                 cs.setNonStrokingColor(new java.awt.Color(0, 51, 102));
                 cs.setFont(fontBold, 9.5f);
-                cs.beginText(); cs.newLineAtOffset(col1X + 5, tableStartY - 10); cs.showText("Particulars"); cs.endText();
-                cs.beginText(); cs.newLineAtOffset(col2X + 5, tableStartY - 10); cs.showText("From"); cs.endText();
-                cs.beginText(); cs.newLineAtOffset(col3X + 5, tableStartY - 10); cs.showText("To"); cs.endText();
+                cs.beginText();
+                cs.newLineAtOffset(col1X + 5, tableStartY - 10);
+                cs.showText("Particulars");
+                cs.endText();
+                cs.beginText();
+                cs.newLineAtOffset(col2X + 5, tableStartY - 10);
+                cs.showText("From");
+                cs.endText();
+                cs.beginText();
+                cs.newLineAtOffset(col3X + 5, tableStartY - 10);
+                cs.showText("To");
+                cs.endText();
+
+                // ✅ FIX: Get transfer type name from master entity
+                String transferTypeName = r.getTransferType() != null ?
+                        r.getTransferType().getName() : "—";
 
                 String[][] rows = {
                         {"Department", safe(r.getFromDepartment() != null ? r.getFromDepartment().getName() : null),
                                 safe(r.getToDepartment() != null ? r.getToDepartment().getName() : null)},
                         {"Branch", fromBranchName, toBranchName},
-                        {"Transfer Type", "-", safe(r.getTransferType())},
+                        {"Transfer Type", "-", transferTypeName},  // ✅ Using master table name
                         {"Effective Date", "-", r.getEffectiveDate() != null ? r.getEffectiveDate().format(DATE_FORMAT) : "—"},
                 };
 
@@ -170,10 +182,19 @@ public class PdfTransferLetterGenerator {
                     }
                     cs.setNonStrokingColor(new java.awt.Color(0, 0, 0));
                     cs.setFont(fontBold, 9);
-                    cs.beginText(); cs.newLineAtOffset(col1X + 5, y - 3); cs.showText(rows[i][0]); cs.endText();
+                    cs.beginText();
+                    cs.newLineAtOffset(col1X + 5, y - 3);
+                    cs.showText(rows[i][0]);
+                    cs.endText();
                     cs.setFont(fontRegular, 9);
-                    cs.beginText(); cs.newLineAtOffset(col2X + 5, y - 3); cs.showText(rows[i][1]); cs.endText();
-                    cs.beginText(); cs.newLineAtOffset(col3X + 5, y - 3); cs.showText(rows[i][2]); cs.endText();
+                    cs.beginText();
+                    cs.newLineAtOffset(col2X + 5, y - 3);
+                    cs.showText(rows[i][1]);
+                    cs.endText();
+                    cs.beginText();
+                    cs.newLineAtOffset(col3X + 5, y - 3);
+                    cs.showText(rows[i][2]);
+                    cs.endText();
                 }
 
                 float lineY = rowY - (rows.length * rowHeight) - 8;
@@ -188,8 +209,12 @@ public class PdfTransferLetterGenerator {
                 if (r.getTransferReason() != null && !r.getTransferReason().isBlank()) {
                     cs.setNonStrokingColor(new java.awt.Color(0, 0, 0));
                     cs.setFont(fontBold, 9.5f);
-                    cs.beginText(); cs.newLineAtOffset(margin, reasonY); cs.showText("Reason:"); cs.endText();
-                    reasonY = drawWrappedText(cs, fontRegular, 9.5f, r.getTransferReason(), margin, reasonY - 14, contentWidth, 13);
+                    cs.beginText();
+                    cs.newLineAtOffset(margin, reasonY);
+                    cs.showText("Reason:");
+                    cs.endText();
+                    reasonY = drawWrappedText(cs, fontRegular, 9.5f, r.getTransferReason(),
+                            margin, reasonY - 14, contentWidth, 13);
                 }
 
                 // ========== CLOSING ==========

@@ -3,6 +3,7 @@ package com.hrms.transfer.domain;
 import com.hrms.employee.domain.Employee;
 import com.hrms.master.domain.Branch;
 import com.hrms.master.domain.Department;
+import com.hrms.master.domain.TransferType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,10 +31,10 @@ public class TransferRecord {
     @Column(name = "transfer_date")
     private LocalDate transferDate;
 
-    // Stored as plain string since the form uses a simple dropdown
-    // (Permanent Transfer / Temporary / On Deputation) with no dedicated master table.
-    @Column(name = "transfer_type", length = 40)
-    private String transferType;
+    // ✅ Changed: Now maps to TransferType master table
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transfer_type_id")
+    private TransferType transferType;
 
     // ── Department change (From → To) ──
     @ManyToOne(fetch = FetchType.LAZY)
@@ -59,8 +60,7 @@ public class TransferRecord {
     @Column(name = "transfer_reason", length = 1000)
     private String transferReason;
 
-    // Snapshot of the employee's designation at transfer time — the form shows
-    // this as a read-only "Auto-populated" field; a transfer doesn't change designation.
+    // Snapshot of the employee's designation at transfer time
     @Column(name = "designation_name", length = 150)
     private String designationName;
 

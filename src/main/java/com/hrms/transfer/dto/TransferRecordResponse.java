@@ -1,8 +1,8 @@
 package com.hrms.transfer.dto;
 
+import com.hrms.master.dto.TransferTypeResponse;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.LocalDate;
 
 @Getter
@@ -13,11 +13,13 @@ public class TransferRecordResponse {
     private Long employeeId;
     private String employee;
     private String employeeCode;
-    private String designation; // snapshot, unchanged by the transfer
+    private String designation;
 
     private String transferOrderNumber;
     private LocalDate transferDate;
-    private String transferType;
+
+    // ✅ Changed: Full TransferType object in response
+    private TransferTypeResponse transferType;
 
     private String fromDepartment;
     private String toDepartment;
