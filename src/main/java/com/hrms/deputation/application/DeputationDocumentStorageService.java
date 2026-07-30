@@ -18,7 +18,6 @@ public class DeputationDocumentStorageService {
 
     private static final String SUBFOLDER = "deputations";
 
-    /** Saves generated PDF bytes to disk and returns the absolute path. */
     public String saveGenerated(Long deputationId, String employeeCode, byte[] pdfBytes) throws IOException {
         Path dir = Paths.get(uploadDir, SUBFOLDER);
         Files.createDirectories(dir);
@@ -31,7 +30,6 @@ public class DeputationDocumentStorageService {
         return target.toString();
     }
 
-    /** Saves a manually uploaded file (overrides the auto-generated one) and returns the absolute path. */
     public String saveUploaded(Long deputationId, MultipartFile file) throws IOException {
         Path dir = Paths.get(uploadDir, SUBFOLDER);
         Files.createDirectories(dir);

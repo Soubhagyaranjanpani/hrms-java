@@ -38,8 +38,7 @@ public class DeputationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseUtils.createSuccessResponse(
-                getListUseCase.execute(search, page, size), new TypeReference<>() {
-                });
+                getListUseCase.execute(search, page, size), new TypeReference<>() {});
     }
 
     @GetMapping("/by-flag")
@@ -49,16 +48,14 @@ public class DeputationController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search) {
         return ResponseUtils.createSuccessResponse(
-                getListUseCase.executeByFlag(flag, search, page, size), new TypeReference<>() {
-                });
+                getListUseCase.executeByFlag(flag, search, page, size), new TypeReference<>() {});
     }
 
     @GetMapping("/all")
     public ApiResponse<List<DeputationRecordResponse>> getAllDeputations(
             @RequestParam Integer flag) {
         return ResponseUtils.createSuccessResponse(
-                getListUseCase.executeAllByFlag(flag), new TypeReference<>() {
-                });
+                getListUseCase.executeAllByFlag(flag), new TypeReference<>() {});
     }
 
     @GetMapping("/data")
@@ -71,8 +68,7 @@ public class DeputationController {
                     .stream()
                     .map(mapper::toResponse)
                     .collect(Collectors.toList());
-            return ResponseUtils.createSuccessResponse(all, new TypeReference<>() {
-            });
+            return ResponseUtils.createSuccessResponse(all, new TypeReference<>() {});
         } else if (flag == 1) {
             if (id == null) {
                 throw new IllegalArgumentException("ID is required when flag=1");
@@ -80,8 +76,7 @@ public class DeputationController {
             DeputationRecordResponse response = deputationRepo.findById(id)
                     .map(mapper::toResponse)
                     .orElseThrow(() -> new RuntimeException("Record not found"));
-            return ResponseUtils.createSuccessResponse(response, new TypeReference<>() {
-            });
+            return ResponseUtils.createSuccessResponse(response, new TypeReference<>() {});
         } else {
             throw new IllegalArgumentException("Flag must be 0 or 1");
         }
@@ -92,21 +87,18 @@ public class DeputationController {
         DeputationRecordResponse r = deputationRepo.findById(id)
                 .map(mapper::toResponse)
                 .orElseThrow(() -> new RuntimeException("Record not found"));
-        return ResponseUtils.createSuccessResponse(r, new TypeReference<>() {
-        });
+        return ResponseUtils.createSuccessResponse(r, new TypeReference<>() {});
     }
 
     @GetMapping("/employee/{empId}")
     public ApiResponse<List<DeputationRecordResponse>> getEmployeeHistory(@PathVariable Long empId) {
-        return ResponseUtils.createSuccessResponse(historyUseCase.execute(empId), new TypeReference<>() {
-        });
+        return ResponseUtils.createSuccessResponse(historyUseCase.execute(empId), new TypeReference<>() {});
     }
 
     @PostMapping("/create")
     @PreAuthorize("hasRole('HR') or hasRole('Admin')")
     public ApiResponse<DeputationRecordResponse> create(@RequestBody CreateDeputationRequest req) {
-        return ResponseUtils.createSuccessResponse(createUseCase.execute(req), new TypeReference<>() {
-        });
+        return ResponseUtils.createSuccessResponse(createUseCase.execute(req), new TypeReference<>() {});
     }
 
     @PutMapping("/{id}/update")
@@ -114,8 +106,7 @@ public class DeputationController {
     public ApiResponse<DeputationRecordResponse> update(
             @PathVariable Long id,
             @RequestBody UpdateDeputationRequest req) {
-        return ResponseUtils.createSuccessResponse(updateUseCase.execute(id, req), new TypeReference<>() {
-        });
+        return ResponseUtils.createSuccessResponse(updateUseCase.execute(id, req), new TypeReference<>() {});
     }
 
     @PutMapping("/{id}/status")
@@ -126,8 +117,7 @@ public class DeputationController {
         setStatusUseCase.execute(id, active);
         return ResponseUtils.createSuccessResponse(
                 "Status updated to " + (active ? "ACTIVE" : "INACTIVE"),
-                new TypeReference<>() {
-                });
+                new TypeReference<>() {});
     }
 
     @PostMapping("/{id}/document")
@@ -136,8 +126,7 @@ public class DeputationController {
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file) throws Exception {
         uploadDocumentUseCase.execute(id, file);
-        return ResponseUtils.createSuccessResponse("Document uploaded successfully", new TypeReference<>() {
-        });
+        return ResponseUtils.createSuccessResponse("Document uploaded successfully", new TypeReference<>() {});
     }
 
     @GetMapping("/{id}/document")

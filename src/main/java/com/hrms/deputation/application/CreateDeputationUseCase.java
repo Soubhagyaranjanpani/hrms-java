@@ -8,6 +8,8 @@ import com.hrms.employee.domain.Employee;
 import com.hrms.employee.domain.EmployeeDesignation;
 import com.hrms.employee.infrastructure.EmployeeDesignationRepository;
 import com.hrms.employee.infrastructure.EmployeeRepository;
+import com.hrms.master.domain.DeputationType;
+import com.hrms.master.infrastructure.DeputationTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,7 @@ public class CreateDeputationUseCase {
     private final DeputationRepository deputationRepo;
     private final EmployeeRepository empRepo;
     private final EmployeeDesignationRepository employeeDesignationRepo;
+    private final DeputationTypeRepository deputationTypeRepo;
     private final DeputationMapper mapper;
     private final PdfDeputationLetterGenerator letterGenerator;
     private final DeputationDocumentStorageService storageService;
@@ -28,13 +31,28 @@ public class CreateDeputationUseCase {
         Employee emp = empRepo.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
+        // Fetch Deputation Type
+        DeputationType deputationType = null;
+        if (req.getDeputationTypeId() != null) {
+            deputationType = deputationTypeRepo.findById(req.getDeputationTypeId())
+                    .orElseThrow(() -> new RuntimeException("Deputation Type not found"));
+        }
+
+        // Fetch Reporting Authority
+        EmployeeDesignation authority = employeeDesignationRepo.findById(req.getReportingAuthorityId())
+                .orElseThrow(() -> new RuntimeException("Reporting authority not found"));
+
         DeputationRecord r = new DeputationRecord();
         r.setEmployee(emp);
         r.setDeputationOrderNumber(req.getDeputationOrderNumber());
         r.setDeputationOrganization(req.getDeputationOrganization());
-        r.setDeputationType(req.getDeputationType());
+        r.setDeputationType(deputationType);
+        r.setReportingAuthority(authority);
+        r.setStartDate(req.getStartDate() != null ? req.getStartDate() : LocalDate.now());
+        r.setEndDate(req.getEndDate());
+        r.setRemarks(req.getRemarks());
 
-        // ── Auto-populate department/designation from the employee's current record ──
+        // Auto-populate department/designation from employee
         r.setDepartmentName(emp.getDepartment() != null ? emp.getDepartment().getName() : null);
 
         employeeDesignationRepo.findFirstByEmployee_IdAndIsActiveTrueAndIsDeletedFalse(emp.getId())
@@ -44,18 +62,11 @@ public class CreateDeputationUseCase {
                     }
                 });
 
-        // ── Reporting Authority ──
-        EmployeeDesignation authority = employeeDesignationRepo.findById(req.getReportingAuthorityId())
-                .orElseThrow(() -> new RuntimeException("Reporting authority not found"));
-        r.setReportingAuthority(authority);
-
-        r.setStartDate(req.getStartDate() != null ? req.getStartDate() : LocalDate.now());
-        r.setEndDate(req.getEndDate());
         r.setIsActive(true);
 
         DeputationRecord saved = deputationRepo.save(r);
 
-        // Auto-generate the deputation letter and persist its path/name on the record
+        // Auto-generate deputation letter
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
@@ -64,7 +75,7 @@ public class CreateDeputationUseCase {
             saved.setDocumentName(storageService.fileNameOf(path));
             saved = deputationRepo.save(saved);
         } catch (Exception e) {
-            System.err.println("Failed to auto-generate deputation letter for id " + saved.getId() + ": " + e.getMessage());
+            System.err.println("Failed to auto-generate deputation letter: " + e.getMessage());
         }
 
         return mapper.toResponse(saved);

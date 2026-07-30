@@ -1,4 +1,3 @@
-// File: com/hrms/deputation/application/PdfDeputationLetterGenerator.java
 package com.hrms.deputation.application;
 
 import com.hrms.deputation.domain.DeputationRecord;
@@ -67,7 +66,7 @@ public class PdfDeputationLetterGenerator {
                             }
                         }
                     } catch (Exception e) {
-                        System.err.println("Failed to load logo from " + logoPath + ": " + e.getMessage());
+                        System.err.println("Failed to load logo: " + e.getMessage());
                     }
                 }
 
@@ -152,7 +151,7 @@ public class PdfDeputationLetterGenerator {
                 cs.beginText(); cs.newLineAtOffset(col1X + 5, tableStartY - 10); cs.showText("Particulars"); cs.endText();
                 cs.beginText(); cs.newLineAtOffset(col2X + 5, tableStartY - 10); cs.showText("Details"); cs.endText();
 
-                // Resolve reporting authority name/designation once, used in both table and signature block
+                // Resolve authority
                 String authorityName = "—";
                 String authorityDesig = "—";
                 EmployeeDesignation authority = r.getReportingAuthority();
@@ -165,9 +164,11 @@ public class PdfDeputationLetterGenerator {
                     }
                 }
 
+                String deputationTypeName = r.getDeputationType() != null ? r.getDeputationType().getName() : "—";
+
                 String[][] rows = {
                         {"Deputation Organization", safe(r.getDeputationOrganization())},
-                        {"Deputation Type", safe(r.getDeputationType())},
+                        {"Deputation Type", deputationTypeName},
                         {"Start Date", r.getStartDate() != null ? r.getStartDate().format(DATE_FORMAT) : "—"},
                         {"End Date", r.getEndDate() != null ? r.getEndDate().format(DATE_FORMAT) : "—"},
                         {"Reporting Authority", authorityDesig},
@@ -196,8 +197,17 @@ public class PdfDeputationLetterGenerator {
                 cs.lineTo(pageWidth - margin, lineY + 8);
                 cs.stroke();
 
+                // ========== REMARKS ==========
+                float remY = lineY - 20;
+                if (r.getRemarks() != null && !r.getRemarks().isBlank()) {
+                    cs.setNonStrokingColor(new java.awt.Color(0, 0, 0));
+                    cs.setFont(fontBold, 9.5f);
+                    cs.beginText(); cs.newLineAtOffset(margin, remY); cs.showText("Remarks:"); cs.endText();
+                    remY = drawWrappedText(cs, fontRegular, 9.5f, r.getRemarks(), margin, remY - 14, contentWidth, 13);
+                }
+
                 // ========== CLOSING ==========
-                float closeY = lineY - 25;
+                float closeY = remY - 25;
                 cs.setNonStrokingColor(new java.awt.Color(0, 0, 0));
                 cs.setFont(fontRegular, 10);
                 cs.beginText();

@@ -2,6 +2,7 @@ package com.hrms.deputation.domain;
 
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.domain.EmployeeDesignation;
+import com.hrms.master.domain.DeputationType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,8 +27,6 @@ public class DeputationRecord {
     @Column(name = "deputation_order_number", unique = true, length = 100)
     private String deputationOrderNumber;
 
-    // Free-text external organization name (e.g. "Ministry of Corporate Affairs",
-    // "PwC India") — no master table for this, unlike department/branch elsewhere.
     @Column(name = "deputation_organization", length = 255)
     private String deputationOrganization;
 
@@ -37,18 +36,17 @@ public class DeputationRecord {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    // Stored as plain string since the form uses a simple dropdown
-    // (Domestic Deputation / Government / Project Based / Training / International).
-    @Column(name = "deputation_type", length = 40)
-    private String deputationType;
-
-    // ── Reporting Authority at the deputation location ──
+    // ✅ Deputation Type - Master table mapping
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reporting_authority", nullable = false)
+    @JoinColumn(name = "deputation_type_id")
+    private DeputationType deputationType;
+
+    // ✅ Reporting Authority - EmployeeDesignation mapping
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reporting_authority_id", nullable = false)
     private EmployeeDesignation reportingAuthority;
 
-    // Snapshot of department/designation at the time of deputation — the form shows
-    // these as read-only "Auto-populated" fields; a deputation doesn't change them.
+    // Snapshot fields
     @Column(name = "department_name", length = 150)
     private String departmentName;
 
@@ -63,6 +61,8 @@ public class DeputationRecord {
 
     @Column(name = "document_name", length = 255)
     private String documentName;
+
+    private String remarks;
 
     private Boolean isDeleted = false;
 

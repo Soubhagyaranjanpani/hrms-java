@@ -18,13 +18,12 @@ public interface DeputationRepository extends JpaRepository<DeputationRecord, Lo
         WHERE d.isDeleted = false AND (
             LOWER(d.deputationOrderNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR
             LOWER(d.deputationOrganization) LIKE LOWER(CONCAT('%', :search, '%')) OR
-            LOWER(d.deputationType) LIKE LOWER(CONCAT('%', :search, '%'))
+            LOWER(d.deputationType.name) LIKE LOWER(CONCAT('%', :search, '%'))
         )
         """)
     Page<DeputationRecord> searchByOrderNumberOrOrganizationOrType(
             @Param("search") String search, Pageable pageable);
 
-    // ── Active/Inactive filtering (mirrors Promotion/Appointment/Confirmation/Transfer "flag" endpoints) ──
     Page<DeputationRecord> findByIsActiveAndIsDeletedFalse(Boolean isActive, Pageable pageable);
 
     List<DeputationRecord> findByIsActiveAndIsDeletedFalse(Boolean isActive);
@@ -34,7 +33,7 @@ public interface DeputationRepository extends JpaRepository<DeputationRecord, Lo
         WHERE d.isDeleted = false AND d.isActive = :isActive AND (
             LOWER(d.deputationOrderNumber) LIKE LOWER(CONCAT('%', :search, '%')) OR
             LOWER(d.deputationOrganization) LIKE LOWER(CONCAT('%', :search, '%')) OR
-            LOWER(d.deputationType) LIKE LOWER(CONCAT('%', :search, '%'))
+            LOWER(d.deputationType.name) LIKE LOWER(CONCAT('%', :search, '%'))
         )
         """)
     Page<DeputationRecord> searchByOrderNumberOrOrganizationOrTypeAndIsActive(
