@@ -45,4 +45,6 @@ public interface TransferRepository extends JpaRepository<TransferRecord, Long> 
             Pageable pageable);
 
     List<TransferRecord> findByEmployee_IdAndIsDeletedFalseOrderByTransferDateDesc(Long empId);
+    List<TransferRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
 }

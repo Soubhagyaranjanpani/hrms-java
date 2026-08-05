@@ -42,4 +42,6 @@ public interface TrainingRepository extends JpaRepository<TrainingRecord, Long> 
             Pageable pageable);
 
     List<TrainingRecord> findByEmployee_IdAndIsDeletedFalseOrderByStartDateDesc(Long empId);
+
+    Iterable<Object> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
 }

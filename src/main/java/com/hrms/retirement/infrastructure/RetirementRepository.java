@@ -44,4 +44,6 @@ public interface RetirementRepository extends JpaRepository<RetirementRecord, Lo
             Pageable pageable);
 
     List<RetirementRecord> findByEmployee_IdAndIsDeletedFalseOrderByRetirementDateDesc(Long empId);
+    List<RetirementRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
 }

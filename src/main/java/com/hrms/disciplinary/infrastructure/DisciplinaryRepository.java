@@ -44,4 +44,6 @@ public interface DisciplinaryRepository extends JpaRepository<DisciplinaryRecord
             Pageable pageable);
 
     List<DisciplinaryRecord> findByEmployee_IdAndIsDeletedFalseOrderByIncidentDateDesc(Long empId);
+    List<DisciplinaryRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
 }

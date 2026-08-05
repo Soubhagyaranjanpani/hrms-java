@@ -43,4 +43,6 @@ public interface ConfirmationRepository extends JpaRepository<ConfirmationRecord
             Pageable pageable);
 
     List<ConfirmationRecord> findByEmployee_IdAndIsDeletedFalseOrderByConfirmationDateDesc(Long empId);
+    List<ConfirmationRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
 }

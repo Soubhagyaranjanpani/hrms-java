@@ -12,4 +12,6 @@ public class ServiceBookResponse {
     private String serviceBookNo;
     private  String serviceBookName;
     private Boolean isActive;
+    private Long empId;
+    private String branchName;
 }

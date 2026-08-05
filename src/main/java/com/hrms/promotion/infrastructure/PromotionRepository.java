@@ -150,4 +150,6 @@ public interface PromotionRepository extends JpaRepository<PromotionRecord, Long
         ORDER BY empCount DESC
     """, nativeQuery = true)
     List<Object[]> deptBreakdown();
+    List<PromotionRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
 }

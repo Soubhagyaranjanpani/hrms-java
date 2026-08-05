@@ -42,4 +42,6 @@ public interface DeputationRepository extends JpaRepository<DeputationRecord, Lo
             Pageable pageable);
 
     List<DeputationRecord> findByEmployee_IdAndIsDeletedFalseOrderByStartDateDesc(Long empId);
+    List<DeputationRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
 }

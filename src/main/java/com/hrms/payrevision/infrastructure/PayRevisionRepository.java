@@ -42,4 +42,6 @@ public interface PayRevisionRepository extends JpaRepository<PayRevisionRecord, 
             Pageable pageable);
 
     List<PayRevisionRecord> findByEmployee_IdAndIsDeletedFalseOrderByEffectiveDateDesc(Long empId);
+    List<PayRevisionRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
 }

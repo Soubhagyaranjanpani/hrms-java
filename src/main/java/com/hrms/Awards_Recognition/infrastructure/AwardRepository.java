@@ -45,4 +45,6 @@ public interface AwardRepository extends JpaRepository<AwardRecord, Long> {
             Pageable pageable);
 
     List<AwardRecord> findByEmployee_IdAndIsDeletedFalseOrderByAwardDateDesc(Long empId);
+
+    Iterable<Object> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
 }

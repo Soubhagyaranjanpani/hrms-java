@@ -165,10 +165,14 @@ public class ServiceBookService {
 
         Employee employee = entity.getEmployee();
         if (employee != null) {
+            response.setEmpId(employee.getId());
             response.setEmployeeName(employee.getFullName());
             response.setEmployeeCode(employee.getEmployeeCode());
             response.setDepartment(
                     employee.getDepartment() != null ? employee.getDepartment().getName() : null
+            );
+            response.setBranchName(
+                    employee.getBranch() != null ? employee.getBranch().getName() : null
             );
         }
 
