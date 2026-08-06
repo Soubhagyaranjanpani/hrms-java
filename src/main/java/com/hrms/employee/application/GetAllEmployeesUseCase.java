@@ -69,13 +69,18 @@ public class GetAllEmployeesUseCase {
         res.setUan(emp.getUan());
         res.setPan(emp.getPan());
 
-        Optional<EmployeeDesignation> designation =
-                employeeDesignationRepository
-                        .findFirstByEmployee_IdAndIsActiveTrueAndIsDeletedFalse(emp.getId());
+//        Optional<EmployeeDesignation> designation =
+//                employeeDesignationRepository
+//                        .findFirstByEmployee_IdAndIsActiveTrueAndIsDeletedFalse(emp.getId());
 
-        designation.ifPresent(d ->
-                res.setDesignation(d.getDesignation().getName())
-        );
+//        designation.ifPresent(d ->
+//                res.setDesignation(d.getDesignation().getName())
+//        );
+        if(emp.getDesignation()!=null){
+            res.setDesignation(emp.getDesignation().getName());
+        }
+
+
 
         Optional<ServiceBook> serviceBook =
                 serviceBookRepository.findByEmployeeIdAndIsDeletedFalse(emp.getId());

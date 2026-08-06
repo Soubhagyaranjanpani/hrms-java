@@ -2,6 +2,7 @@ package com.hrms.employee.domain;
 
 import com.hrms.master.domain.Branch;
 import com.hrms.master.domain.Department;
+import com.hrms.master.domain.Designation;
 import com.hrms.master.domain.Role;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -80,6 +81,10 @@ public class Employee implements UserDetails {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "grade_id")
     private EmployeeGrade grade;
+
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name = "designation_id")
+    private Designation designation;
 
 
     @OneToMany(mappedBy = "manager")
