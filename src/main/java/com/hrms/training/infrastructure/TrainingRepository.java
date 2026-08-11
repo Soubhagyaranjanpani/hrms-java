@@ -44,4 +44,6 @@ public interface TrainingRepository extends JpaRepository<TrainingRecord, Long> 
     List<TrainingRecord> findByEmployee_IdAndIsDeletedFalseOrderByStartDateDesc(Long empId);
 
     Iterable<Object> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    List<TrainingRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
+
 }

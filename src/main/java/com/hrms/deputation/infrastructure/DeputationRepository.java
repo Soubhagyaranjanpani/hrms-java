@@ -43,5 +43,6 @@ public interface DeputationRepository extends JpaRepository<DeputationRecord, Lo
 
     List<DeputationRecord> findByEmployee_IdAndIsDeletedFalseOrderByStartDateDesc(Long empId);
     List<DeputationRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    List<DeputationRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
 
 }

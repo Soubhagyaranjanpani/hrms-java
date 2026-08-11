@@ -45,5 +45,6 @@ public interface DisciplinaryRepository extends JpaRepository<DisciplinaryRecord
 
     List<DisciplinaryRecord> findByEmployee_IdAndIsDeletedFalseOrderByIncidentDateDesc(Long empId);
     List<DisciplinaryRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    List<DisciplinaryRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
 
 }

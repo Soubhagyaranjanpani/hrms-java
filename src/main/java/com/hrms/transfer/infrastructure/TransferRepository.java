@@ -46,5 +46,6 @@ public interface TransferRepository extends JpaRepository<TransferRecord, Long> 
 
     List<TransferRecord> findByEmployee_IdAndIsDeletedFalseOrderByTransferDateDesc(Long empId);
     List<TransferRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    List<TransferRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
 
 }

@@ -44,6 +44,7 @@ public interface AppointmentRepository extends JpaRepository<AppointmentRecord, 
 
     List<AppointmentRecord> findByEmployee_IdAndIsDeletedFalseOrderByAppointmentDateDesc(Long empId);
     List<AppointmentRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
-    ;
+    List<AppointmentRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
+
 
 }

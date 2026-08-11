@@ -1,6 +1,5 @@
 package com.hrms.Awards_Recognition.infrastructure;
 
-
 import com.hrms.Awards_Recognition.domain.AwardRecord;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -47,4 +46,6 @@ public interface AwardRepository extends JpaRepository<AwardRecord, Long> {
     List<AwardRecord> findByEmployee_IdAndIsDeletedFalseOrderByAwardDateDesc(Long empId);
 
     Iterable<Object> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    List<AwardRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
+
 }

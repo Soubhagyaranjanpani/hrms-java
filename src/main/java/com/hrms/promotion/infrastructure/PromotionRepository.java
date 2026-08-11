@@ -151,5 +151,7 @@ public interface PromotionRepository extends JpaRepository<PromotionRecord, Long
     """, nativeQuery = true)
     List<Object[]> deptBreakdown();
     List<PromotionRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    List<PromotionRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
+
 
 }

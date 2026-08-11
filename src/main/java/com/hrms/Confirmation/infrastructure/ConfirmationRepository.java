@@ -44,5 +44,7 @@ public interface ConfirmationRepository extends JpaRepository<ConfirmationRecord
 
     List<ConfirmationRecord> findByEmployee_IdAndIsDeletedFalseOrderByConfirmationDateDesc(Long empId);
     List<ConfirmationRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    List<ConfirmationRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
+
 
 }
