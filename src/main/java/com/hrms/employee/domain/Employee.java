@@ -33,23 +33,19 @@ public class Employee implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Business Identifier
     @Column(name = "employee_code", nullable = false, unique = true, length = 20)
     private String employeeCode;
 
-    // Authentication
     @Column(nullable = false)
     private String password;
 
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    // Role mapping
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
-    // Personal Info
     @Column(nullable = false, length = 50)
     private String firstName;
 
@@ -64,7 +60,6 @@ public class Employee implements UserDetails {
 
     private String profilePicture;
 
-    // Organization mapping
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "department_id")
     private Department department;
@@ -73,7 +68,6 @@ public class Employee implements UserDetails {
     @JoinColumn(name = "branch_id")
     private Branch branch;
 
-    // 🔥 Manager hierarchy (CRITICAL)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     private Employee manager;
@@ -86,23 +80,23 @@ public class Employee implements UserDetails {
     @JoinColumn(name = "designation_id")
     private Designation designation;
 
-
     @OneToMany(mappedBy = "manager")
     private List<Employee> subordinates;
 
-    // Employment info
     private LocalDate joiningDate;
 
     private Boolean isActive = true;
     private Boolean isDeleted = false;
 
-    // Security / login tracking
+    // ✅ is_retirement: false = Active (default), true = Retired
+    @Column(name = "is_retirement", nullable = false)
+    private Boolean isRetirement = false;
+
     private LocalDateTime lastLogin;
 
     private String tempOtp;
     private LocalDateTime otpExpiryTime;
 
-    // Audit fields
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
@@ -110,7 +104,6 @@ public class Employee implements UserDetails {
 
     private String createdBy;
     private String updatedBy;
-    // ADD these fields to your EXISTING Employee.java
 
     @Column(name = "bank_account", length = 20)
     private String bankAccount;
@@ -121,22 +114,20 @@ public class Employee implements UserDetails {
     @Column(name = "pan", length = 10)
     private String pan;
 
-    // Lifecycle hooks
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
         this.isActive = true;
         this.isDeleted = false;
+        if (this.isRetirement == null) {
+            this.isRetirement= false;
+        }
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-
-    // -------------------------------
-    // Spring Security Implementation
-    // -------------------------------
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -148,14 +139,12 @@ public class Employee implements UserDetails {
         return Collections.emptyList();
     }
 
-    // Add inside Employee.java, near the other getters
     public String getFullName() {
         if (lastName == null || lastName.trim().isEmpty()) {
             return firstName;
         }
         return firstName + " " + lastName;
     }
-
 
     @Override
     public String getUsername() {
@@ -181,6 +170,4 @@ public class Employee implements UserDetails {
     public boolean isEnabled() {
         return isActive && !Boolean.TRUE.equals(isDeleted);
     }
-
-
 }

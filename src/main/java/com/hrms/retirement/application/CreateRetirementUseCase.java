@@ -3,8 +3,6 @@ package com.hrms.retirement.application;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeDesignationRepository;
 import com.hrms.employee.infrastructure.EmployeeRepository;
-// ── ASSUMPTION: adjust these imports if your existing master repositories live
-// elsewhere or are named differently.
 import com.hrms.master.domain.PensionEligibility;
 import com.hrms.master.domain.RetirementType;
 import com.hrms.master.infrastructure.PensionEligibilityRepository;
@@ -65,6 +63,12 @@ public class CreateRetirementUseCase {
         r.setIsActive(true);
 
         RetirementRecord saved = retirementRepo.save(r);
+
+        // ✅ NEW: Employee ko inactive mark karein — retirement create hote hi
+        // Service Book / employee list me ye employee "inactive" show hoga
+        emp.setIsRetirement(true);
+        emp.setIsActive(false);
+        empRepo.save(emp);
 
         // Auto-generate the retirement order/letter and persist its path/name on the record
         try {
