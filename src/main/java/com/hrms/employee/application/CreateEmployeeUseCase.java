@@ -16,6 +16,7 @@ import com.hrms.master.domain.Department;
 import com.hrms.master.domain.Role;
 import com.hrms.master.infrastructure.BranchRepository;
 import com.hrms.master.infrastructure.DepartmentRepository;
+import com.hrms.master.infrastructure.DesignationRepository;
 import com.hrms.master.infrastructure.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,6 +37,7 @@ public class CreateEmployeeUseCase {
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
     private final EmployeeGradeRepository gradeRepo;
+    private  final DesignationRepository designationRepository;
 
     public ApiResponse<DefaultResponse> execute(EmployeeCreationReq request) {
 
@@ -65,7 +67,7 @@ public class CreateEmployeeUseCase {
         // 🔥 3. Fetch optional mappings
         Department department = null;
         if (request.getDepartmentId() != null) {
-            department = departmentRepository.findById(request.getDepartmentId()).orElse(null);
+            department = departmentRepository.findById(request.getDepartmentId()).orElseThrow(()->new RuntimeException("Invalid Department Id"));
         }
 
         Branch branch = null;
@@ -109,6 +111,10 @@ public class CreateEmployeeUseCase {
 
         // 🔥 5. Generate employee code
         emp.setEmployeeCode(generateEmployeeCode());
+
+        emp.setDesignation(designationRepository
+                .findById(request.getDesignationId())
+                .orElseThrow(()-> new RuntimeException("Invalid Designation ID")));
 
         // 🔥 6. Save
         employeeRepository.save(emp);

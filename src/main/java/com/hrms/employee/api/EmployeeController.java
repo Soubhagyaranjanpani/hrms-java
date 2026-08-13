@@ -42,6 +42,7 @@ public class EmployeeController {
     private final UpdateEmployeeUseCase updateEmployeeUseCase;
     private final EmployeeRepository employeeRepo;
 
+
     // =========================
     // ADMIN APIs
     // =========================
@@ -86,7 +87,7 @@ public class EmployeeController {
 
         return ResponseEntity.ok(updateEmployeeUseCase.execute(id, request));
     }
-//    @PreAuthorize("hasRole('ADMIN')")
+    //    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<DefaultResponse>> createEmployee(
             @RequestBody EmployeeCreationReq request) {
@@ -169,6 +170,32 @@ public class EmployeeController {
             map.put("branchName", emp.getBranch() != null ? emp.getBranch().getName() : null);
             map.put("gradeId", emp.getGrade() != null ? emp.getGrade().getId() : null);
             map.put("gradeName", emp.getGrade() != null ? emp.getGrade().getName() : null);
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(
+                ResponseUtils.createSuccessResponse(result, new TypeReference<>() {})
+        );
+    }
+
+    // =========================
+    // SEARCH API (Employee Name search / autocomplete)
+    // =========================
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> searchByName(
+            @RequestParam("query") String query) {
+
+        List<Employee> employees = employeeRepo
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(query, query);
+
+        List<Map<String, Object>> result = employees.stream().map(emp -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", emp.getId());
+            map.put("name", emp.getFirstName() + " " + (emp.getLastName() != null ? emp.getLastName() : ""));
+            map.put("employeeCode", emp.getEmployeeCode());
+            map.put("email", emp.getEmail());
+            map.put("departmentName", emp.getDepartment() != null ? emp.getDepartment().getName() : null);
+            map.put("branchName", emp.getBranch() != null ? emp.getBranch().getName() : null);
             return map;
         }).collect(Collectors.toList());
 
