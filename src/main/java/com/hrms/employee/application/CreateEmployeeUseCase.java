@@ -18,6 +18,11 @@ import com.hrms.master.infrastructure.BranchRepository;
 import com.hrms.master.infrastructure.DepartmentRepository;
 import com.hrms.master.infrastructure.DesignationRepository;
 import com.hrms.master.infrastructure.RoleRepository;
+import com.hrms.serviceBook.domain.ServiceBook;
+import com.hrms.serviceBook.infrastructure.ServiceBookRepository;
+import com.hrms.service_history.domain.ServiceHistory;
+import com.hrms.service_history.infrastructure.ServiceHistoryRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,7 +43,10 @@ public class CreateEmployeeUseCase {
     private final AuditLogService auditLogService;
     private final EmployeeGradeRepository gradeRepo;
     private  final DesignationRepository designationRepository;
+    private  final ServiceBookRepository serviceBookRepository;
+    private  final ServiceHistoryRepository serviceHistoryRepository;
 
+    @Transactional
     public ApiResponse<DefaultResponse> execute(EmployeeCreationReq request) {
 
         // 🔥 1. Validate email
@@ -117,7 +125,31 @@ public class CreateEmployeeUseCase {
                 .orElseThrow(()-> new RuntimeException("Invalid Designation ID")));
 
         // 🔥 6. Save
-        employeeRepository.save(emp);
+        Employee savedEmployee = employeeRepository.save(emp);
+        ServiceBook book = new ServiceBook();
+        book.setEmployee(savedEmployee);
+        String serviceBookNo = generateRandomServiceBookNo();
+        book.setServiceBookNo(serviceBookNo);
+        book.setServiceBookName(savedEmployee.getEmployeeCode()+"-"+generateRandomServiceBookNo());
+        book.setCreatedBy(savedEmployee.getCreatedBy());
+        book.setUpdatedBy(savedEmployee.getUpdatedBy());
+
+
+        ServiceBook savedBook = serviceBookRepository.save(book);
+
+        ServiceHistory history= new ServiceHistory();
+        history.setServiceBook(savedBook);
+        history.setToDesignation(savedEmployee.getDesignation());
+        history.setToBranch(savedEmployee.getBranch());
+        history.setToDepartment(savedEmployee.getDepartment());
+        history.setFormDate(savedEmployee.getJoiningDate());
+        history.setCreatedBy(savedEmployee.getCreatedBy());
+        history.setUpdatedBy(savedEmployee.getUpdatedBy());
+        serviceHistoryRepository.save(history);
+
+
+
+
         initializeLeaveBalanceUseCase.execute(emp);  // 🔥 THIS LINE
 
         // 🔥 7. Audit
@@ -141,4 +173,11 @@ public class CreateEmployeeUseCase {
     private String generateEmployeeCode() {
         return "EMP" + (100000 + new Random().nextInt(900000));
     }
+
+    private String generateRandomServiceBookNo() {
+        return "EMP" + (9 + new Random().nextInt(900000));
+    }
+
+
+
 }
