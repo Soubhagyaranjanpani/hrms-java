@@ -2,10 +2,8 @@ package com.hrms.employee.infrastructure;
 
 import com.hrms.employee.domain.EmployeeCertification;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import java.util.List;
 
-@Repository
-public interface EmployeeCertificationRepository extends JpaRepository<EmployeeCertification,Long> {
-
+public interface EmployeeCertificationRepository extends JpaRepository<EmployeeCertification, Long> {
+    List<EmployeeCertification> findByEmployee_Id(Long employeeId);
 }
-

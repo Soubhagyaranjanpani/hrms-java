@@ -45,7 +45,9 @@ public interface AwardRepository extends JpaRepository<AwardRecord, Long> {
 
     List<AwardRecord> findByEmployee_IdAndIsDeletedFalseOrderByAwardDateDesc(Long empId);
 
-    Iterable<Object> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+    // ✅ FIXED HERE: Changed from Iterable<Object> to List<AwardRecord>
+    List<AwardRecord> findByEmployee_IdAndIsDeletedFalse(Long employeeId);
+
     List<AwardRecord> findByEmployee_IdAndIsDeletedFalseAndDocumentPathIsNotNull(Long employeeId);
 
 }
