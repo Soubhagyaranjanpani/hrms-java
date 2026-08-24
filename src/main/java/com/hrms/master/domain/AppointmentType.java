@@ -47,4 +47,9 @@ public class AppointmentType {
 
     @Column(name = "updated_by", length = 255)
     private String updatedBy;
+
+    // ✅ YEH METHOD ADD KIYA HAI (Service ko getName() chahiye tha)
+    public String getName() {
+        return this.appointmentType;
+    }
 }
