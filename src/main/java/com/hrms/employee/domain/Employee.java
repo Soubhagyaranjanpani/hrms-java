@@ -114,6 +114,22 @@ public class Employee implements UserDetails {
     @Column(name = "pan", length = 10)
     private String pan;
 
+
+    // add inside Employee.java, alongside existing fields
+
+    @Column(name = "married_status", length = 10)
+    private String marriedStatus; // "YES" / "NO"
+
+    @Column(name = "children_count")
+    private Integer childrenCount;
+
+    @Column(name = "father_name", length = 100)
+    private String fatherName;
+
+    @Column(name = "mother_name", length = 100)
+    private String motherName;
+
+
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();

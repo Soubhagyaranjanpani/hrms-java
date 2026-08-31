@@ -3,6 +3,7 @@ package com.hrms.employee.dto;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class EmployeeCreationReq {
@@ -26,5 +27,13 @@ public class EmployeeCreationReq {
     private String uan;
     private String pan;
 
-
+    // ── new: family / qualification / experience / nominee ──
+    private String marriedStatus;
+    private Integer childrenCount;
+    private List<String> childrenNames;
+    private String fatherName;
+    private String motherName;
+    private List<QualificationDto> qualifications;
+    private List<ExperienceDto> experiences;
+    private List<NomineeDto> nomineeList;
 }
