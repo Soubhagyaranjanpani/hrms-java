@@ -1,7 +1,9 @@
 package com.hrms.employee.application;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.hrms.audit.application.AuditLogService;
+import com.hrms.audit.application.AuditService;
+import com.hrms.audit.domain.AuditAction;
+import com.hrms.audit.domain.AuditModule;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.DefaultResponse;
 import com.hrms.common.utils.ResponseUtils;
@@ -27,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -40,58 +41,50 @@ public class CreateEmployeeUseCase {
     private final BranchRepository branchRepository;
     private final InitializeLeaveBalanceUseCase initializeLeaveBalanceUseCase;
     private final PasswordEncoder passwordEncoder;
-    private final AuditLogService auditLogService;
     private final EmployeeGradeRepository gradeRepo;
-    private  final DesignationRepository designationRepository;
-    private  final ServiceBookRepository serviceBookRepository;
-    private  final ServiceHistoryRepository serviceHistoryRepository;
+    private final DesignationRepository designationRepository;
+    private final ServiceBookRepository serviceBookRepository;
+    private final ServiceHistoryRepository serviceHistoryRepository;
+    private final AuditService auditService;  // Only one AuditService injection
 
     @Transactional
     public ApiResponse<DefaultResponse> execute(EmployeeCreationReq request) {
 
-        // 🔥 1. Validate email
+        // 1. Validate email
         if (employeeRepository.existsByEmail(request.getEmail())) {
             return ResponseUtils.createFailureResponse(
                     null,
                     new TypeReference<>() {},
-                    "Employee already exists",
+                    "Employee with this email already exists",
                     400
             );
         }
 
-        // 🔥 2. Fetch Role (MANDATORY)
+        // 2. Fetch Role (MANDATORY)
         Role role = roleRepository.findById(request.getRoleId())
-                .orElse(null);
+                .orElseThrow(() -> new RuntimeException("Invalid Role ID"));
 
-        if (role == null) {
-            return ResponseUtils.createFailureResponse(
-                    null,
-                    new TypeReference<>() {},
-                    "Employee already exists",
-                    400
-            );
-        }
-
-        // 🔥 3. Fetch optional mappings
+        // 3. Fetch optional mappings
         Department department = null;
         if (request.getDepartmentId() != null) {
-            department = departmentRepository.findById(request.getDepartmentId()).orElseThrow(()->new RuntimeException("Invalid Department Id"));
+            department = departmentRepository.findById(request.getDepartmentId())
+                    .orElseThrow(() -> new RuntimeException("Invalid Department Id"));
         }
 
         Branch branch = null;
         if (request.getBranchId() != null) {
-            branch = branchRepository.findById(request.getBranchId()).orElse(null);
+            branch = branchRepository.findById(request.getBranchId())
+                    .orElseThrow(() -> new RuntimeException("Invalid Branch Id"));
         }
 
-        // 🔥 4. Create Employee
+        // 4. Create Employee
         Employee emp = new Employee();
-
         emp.setEmail(request.getEmail());
         emp.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        // 🔥 Name split
-        if (request.getName() != null) {
-            String[] parts = request.getName().trim().split(" ");
+        // Name split
+        if (request.getName() != null && !request.getName().trim().isEmpty()) {
+            String[] parts = request.getName().trim().split("\\s+", 2);
             emp.setFirstName(parts[0]);
             if (parts.length > 1) {
                 emp.setLastName(parts[1]);
@@ -105,8 +98,7 @@ public class CreateEmployeeUseCase {
         emp.setBankAccount(request.getBankAccount());
         emp.setUan(request.getUan());
         emp.setPan(request.getPan());
-        // In the execute method, add:
-        // In the execute method, add:
+
         if (request.getGradeId() != null) {
             EmployeeGrade grade = gradeRepo.findById(request.getGradeId())
                     .orElseThrow(() -> new RuntimeException("Grade not found"));
@@ -117,27 +109,29 @@ public class CreateEmployeeUseCase {
         emp.setDepartment(department);
         emp.setBranch(branch);
 
-        // 🔥 5. Generate employee code
+        // 5. Generate employee code
         emp.setEmployeeCode(generateEmployeeCode());
 
         emp.setDesignation(designationRepository
                 .findById(request.getDesignationId())
-                .orElseThrow(()-> new RuntimeException("Invalid Designation ID")));
+                .orElseThrow(() -> new RuntimeException("Invalid Designation ID")));
 
-        // 🔥 6. Save
+        // 6. Save Employee
         Employee savedEmployee = employeeRepository.save(emp);
+
+        // 7. Create Service Book
         ServiceBook book = new ServiceBook();
         book.setEmployee(savedEmployee);
         String serviceBookNo = generateRandomServiceBookNo();
         book.setServiceBookNo(serviceBookNo);
-        book.setServiceBookName(savedEmployee.getEmployeeCode()+"-"+generateRandomServiceBookNo());
+        book.setServiceBookName(savedEmployee.getEmployeeCode() + "-" + serviceBookNo);
         book.setCreatedBy(savedEmployee.getCreatedBy());
         book.setUpdatedBy(savedEmployee.getUpdatedBy());
 
-
         ServiceBook savedBook = serviceBookRepository.save(book);
 
-        ServiceHistory history= new ServiceHistory();
+        // 8. Create Service History
+        ServiceHistory history = new ServiceHistory();
         history.setServiceBook(savedBook);
         history.setToDesignation(savedEmployee.getDesignation());
         history.setToBranch(savedEmployee.getBranch());
@@ -147,37 +141,32 @@ public class CreateEmployeeUseCase {
         history.setUpdatedBy(savedEmployee.getUpdatedBy());
         serviceHistoryRepository.save(history);
 
+        // 9. Initialize Leave Balance
+        initializeLeaveBalanceUseCase.execute(emp);
 
-
-
-        initializeLeaveBalanceUseCase.execute(emp);  // 🔥 THIS LINE
-
-        // 🔥 7. Audit
-        auditLogService.log(
-                "EMPLOYEE",
-                emp.getId(),
-                "CREATE",
-                request.getEmail(),
-                null,
-                emp
+        // 10. Audit Log - For CREATE, use shorthand method
+        auditService.log(
+                AuditModule.EMPLOYEE,
+                AuditAction.CREATE,
+                "Employee created: " + savedEmployee.getFullName() +
+                        " (" + savedEmployee.getEmployeeCode() + ")",
+                savedEmployee,
+                savedEmployee.getId()
         );
 
-        // 🔥 8. Response
+        // 11. Response
         DefaultResponse res = new DefaultResponse();
         res.setMsg("Employee created successfully");
 
         return ResponseUtils.createSuccessResponse(res, null);
     }
 
-    // 🔥 Employee Code Generator
+    // Employee Code Generator
     private String generateEmployeeCode() {
         return "EMP" + (100000 + new Random().nextInt(900000));
     }
 
     private String generateRandomServiceBookNo() {
-        return "EMP" + (9 + new Random().nextInt(900000));
+        return "SB" + (100000 + new Random().nextInt(900000));
     }
-
-
-
 }

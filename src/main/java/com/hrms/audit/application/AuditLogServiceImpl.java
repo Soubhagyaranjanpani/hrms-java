@@ -16,6 +16,7 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     private final AuditLogRepository auditRepo;
     private final ObjectMapper objectMapper;
+
     @Async
     @Override
     public void log(String entity,
@@ -27,11 +28,11 @@ public class AuditLogServiceImpl implements AuditLogService {
 
         AuditLog log = new AuditLog();
 
-        log.setEntityName(entity);
-        log.setEntityId(entityId);
+        log.setModule(entity);          // entity → module
+        log.setReferenceId(entityId);   // entityId → referenceId
         log.setAction(action);
         log.setPerformedBy(performedBy);
-        log.setTimestamp(LocalDateTime.now());
+        log.setEventTime(LocalDateTime.now());  // timestamp → eventTime
 
         try {
             if (oldValue != null) {

@@ -18,7 +18,7 @@ public class GetAuditLogsUseCase {
 
     public List<AuditLogResponse> getByEntity(String entity, Long entityId) {
 
-        return auditRepo.findByEntityNameAndEntityId(entity, entityId)
+        return auditRepo.findByModuleAndReferenceId(entity, entityId)
                 .stream().map(this::map).collect(Collectors.toList());
     }
 
@@ -30,7 +30,7 @@ public class GetAuditLogsUseCase {
 
     public List<AuditLogResponse> getByDateRange(LocalDateTime start, LocalDateTime end) {
 
-        return auditRepo.findByTimestampBetween(start, end)
+        return auditRepo.findByEventTimeBetween(start, end)
                 .stream().map(this::map).collect(Collectors.toList());
     }
 
@@ -38,11 +38,11 @@ public class GetAuditLogsUseCase {
 
         AuditLogResponse res = new AuditLogResponse();
 
-        res.setEntityName(log.getEntityName());
-        res.setEntityId(log.getEntityId());
+        res.setEntityName(log.getModule());
+        res.setEntityId(log.getReferenceId());
         res.setAction(log.getAction());
         res.setPerformedBy(log.getPerformedBy());
-        res.setTimestamp(log.getTimestamp());
+        res.setTimestamp(log.getEventTime());
         res.setOldValue(log.getOldValue());
         res.setNewValue(log.getNewValue());
 

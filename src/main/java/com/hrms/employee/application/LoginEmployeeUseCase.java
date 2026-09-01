@@ -1,6 +1,6 @@
 package com.hrms.employee.application;
 
-import com.hrms.audit.application.AuditLogService;
+import com.hrms.audit.application.AuditService;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.JwtHelper;
 import com.hrms.common.security.JwtRequest;
@@ -24,13 +24,13 @@ public class LoginEmployeeUseCase {
     private final EmployeeRepository employeeRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtHelper jwtHelper;
-    private final AuditLogService auditLogService;
+    private final AuditService auditService;
 
     public ApiResponse<JwtResponse> execute(JwtRequest request) {
 
         Employee employee = employeeRepository.findByEmail(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("Invalid user"));
-        System.out.println(new BCryptPasswordEncoder().encode("pass"));
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         employee.getEmail(),
@@ -47,16 +47,10 @@ public class LoginEmployeeUseCase {
                 .roleId(employee.getRole().getId())
                 .roleName(employee.getRole().getName())
                 .name(employee.getFirstName())
-
                 .build();
-        auditLogService.log(
-                "AUTH",
-                employee.getId(),
-                "LOGIN",
-                employee.getEmail(),
-                null,
-                "Login success"
-        );
+
+        // Audit Log - Login success
+        auditService.logLogin(employee, "SUCCESS");
 
         employee.setLastLogin(LocalDateTime.now());
         employeeRepository.save(employee);
