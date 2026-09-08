@@ -1,5 +1,8 @@
 package com.hrms.transfer.application;
 
+import com.hrms.audit.application.AuditService;
+import com.hrms.audit.domain.AuditAction;
+import com.hrms.audit.domain.AuditModule;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeDesignationRepository;
 import com.hrms.employee.infrastructure.EmployeeRepository;
@@ -26,17 +29,18 @@ public class CreateTransferUseCase {
     private final EmployeeRepository empRepo;
     private final DepartmentRepository departmentRepo;
     private final BranchRepository branchRepo;
-    private final TransferTypeRepository transferTypeRepo;  // ✅ NEW
+    private final TransferTypeRepository transferTypeRepo;
     private final EmployeeDesignationRepository employeeDesignationRepo;
     private final TransferMapper mapper;
     private final PdfTransferLetterGenerator letterGenerator;
     private final TransferDocumentStorageService storageService;
+    private final AuditService auditService;
 
     public TransferRecordResponse execute(CreateTransferRequest req) {
         Employee emp = empRepo.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-        // ✅ Fetch Transfer Type from master
+        // Fetch Transfer Type from master
         TransferType transferType = null;
         if (req.getTransferTypeId() != null) {
             transferType = transferTypeRepo.findById(req.getTransferTypeId())
@@ -46,8 +50,6 @@ public class CreateTransferUseCase {
         TransferRecord r = new TransferRecord();
         r.setEmployee(emp);
         r.setTransferOrderNumber(req.getTransferOrderNumber());
-
-        // ✅ Set TransferType entity (not string)
         r.setTransferType(transferType);
 
         // ── From department/branch: auto-populated from employee's current record ──
@@ -94,6 +96,7 @@ public class CreateTransferUseCase {
         empRepo.save(emp);
 
         // Auto-generate transfer letter
+        boolean letterGenerated = false;
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
@@ -101,8 +104,74 @@ public class CreateTransferUseCase {
             saved.setDocumentPath(path);
             saved.setDocumentName(storageService.fileNameOf(path));
             saved = transferRepo.save(saved);
+            letterGenerated = true;
         } catch (Exception e) {
             System.err.println("Failed to auto-generate transfer letter: " + e.getMessage());
+        }
+
+        // ── AUDIT LOGGING ──
+
+        // Safely get transfer type name
+        String transferTypeName = "N/A";
+        if (transferType != null) {
+            transferTypeName = transferType.toString(); // Use toString as fallback
+        }
+
+        // 1. Main transfer creation audit
+        auditService.log(
+                AuditModule.TRANSFER,
+                AuditAction.CREATE,
+                "Transfer created for " + emp.getFullName() +
+                        " (" + emp.getEmployeeCode() + ")",
+                emp,
+                "Transfer Record",
+                null,
+                "Order: " + saved.getTransferOrderNumber() +
+                        ", Type: " + transferTypeName,
+                "Transfer from " + fromDept.getName() + " to " + toDept.getName() +
+                        (req.getTransferReason() != null ? ", Reason: " + req.getTransferReason() : ""),
+                saved.getId()
+        );
+
+        // 2. Department change audit
+        auditService.log(
+                AuditModule.TRANSFER,
+                AuditAction.UPDATE,
+                "Department changed for " + emp.getFullName(),
+                emp,
+                "Department",
+                fromDept.getName(),
+                toDept.getName(),
+                "Transfer: " + saved.getTransferOrderNumber(),
+                saved.getId()
+        );
+
+        // 3. Branch change audit
+        auditService.log(
+                AuditModule.TRANSFER,
+                AuditAction.UPDATE,
+                "Branch changed for " + emp.getFullName(),
+                emp,
+                "Branch",
+                fromBranch.getName(),
+                toBranch.getName(),
+                "Transfer: " + saved.getTransferOrderNumber(),
+                saved.getId()
+        );
+
+        // 4. Document generation audit (if successful)
+        if (letterGenerated) {
+            auditService.log(
+                    AuditModule.DOCUMENTS,
+                    AuditAction.UPLOAD,
+                    "Transfer letter generated: " + saved.getDocumentName(),
+                    emp,
+                    "Document",
+                    null,
+                    saved.getDocumentName(),
+                    "Auto-generated transfer letter",
+                    saved.getId()
+            );
         }
 
         return mapper.toResponse(saved);

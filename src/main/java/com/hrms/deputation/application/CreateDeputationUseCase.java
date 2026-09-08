@@ -1,5 +1,8 @@
 package com.hrms.deputation.application;
 
+import com.hrms.audit.application.AuditService;
+import com.hrms.audit.domain.AuditAction;
+import com.hrms.audit.domain.AuditModule;
 import com.hrms.deputation.domain.DeputationRecord;
 import com.hrms.deputation.dto.CreateDeputationRequest;
 import com.hrms.deputation.dto.DeputationRecordResponse;
@@ -26,6 +29,7 @@ public class CreateDeputationUseCase {
     private final DeputationMapper mapper;
     private final PdfDeputationLetterGenerator letterGenerator;
     private final DeputationDocumentStorageService storageService;
+    private final AuditService auditService;
 
     public DeputationRecordResponse execute(CreateDeputationRequest req) {
         Employee emp = empRepo.findById(req.getEmployeeId())
@@ -67,6 +71,7 @@ public class CreateDeputationUseCase {
         DeputationRecord saved = deputationRepo.save(r);
 
         // Auto-generate deputation letter
+        boolean letterGenerated = false;
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
@@ -74,8 +79,43 @@ public class CreateDeputationUseCase {
             saved.setDocumentPath(path);
             saved.setDocumentName(storageService.fileNameOf(path));
             saved = deputationRepo.save(saved);
+            letterGenerated = true;
         } catch (Exception e) {
             System.err.println("Failed to auto-generate deputation letter: " + e.getMessage());
+        }
+
+        // ── AUDIT LOGGING (Consolidated) ──
+
+        // 1. Main deputation creation with all details
+        String deputationDetails = "Organization: " + saved.getDeputationOrganization() +
+                ", Type: " + (deputationType != null ? deputationType.toString() : "N/A") +
+                ", Period: " + saved.getStartDate() + " to " +
+                (saved.getEndDate() != null ? saved.getEndDate().toString() : "Ongoing");
+
+        auditService.log(
+                AuditModule.DEPUTATION,
+                AuditAction.CREATE,
+                "Deputation created for " + emp.getFullName() +
+                        " (" + emp.getEmployeeCode() + ")",
+                emp,
+                "Deputation Record",
+                null,
+                deputationDetails,
+                "Deputation order: " + saved.getDeputationOrderNumber() +
+                        ", Reporting Authority: " + authority.toString() +
+                        (req.getRemarks() != null ? ", Remarks: " + req.getRemarks() : ""),
+                saved.getId()
+        );
+
+        // 2. Document generation audit
+        if (letterGenerated) {
+            auditService.log(
+                    AuditModule.DOCUMENTS,
+                    AuditAction.UPLOAD,
+                    "Deputation letter generated: " + saved.getDocumentName(),
+                    emp,
+                    saved.getId()
+            );
         }
 
         return mapper.toResponse(saved);

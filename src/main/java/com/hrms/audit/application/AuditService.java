@@ -1,210 +1,257 @@
 package com.hrms.audit.application;
 
-import com.hrms.audit.domain.AuditAction;
 import com.hrms.audit.domain.AuditLog;
+import com.hrms.audit.dto.AuditLogDTO;
+import com.hrms.audit.dto.AuditLogResponse;
+import com.hrms.audit.repository.AuditLogRepository;
+import com.hrms.audit.application.AuditSpecification;
+import com.hrms.audit.domain.AuditAction;
 import com.hrms.audit.domain.AuditModule;
-import com.hrms.audit.infrastructure.AuditLogRepository;
 import com.hrms.employee.domain.Employee;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.List;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
-    private static final AtomicLong AUDIT_SEQUENCE = new AtomicLong(0);
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
-    /**
-     * Generic audit method — call this from ANY module's service
-     * (Promotion, Transfer, ServiceBook, etc.) after an action succeeds.
-     */
-    public void log(String module, String action, String description,
-                    Employee subjectEmployee, String fieldChanged,
-                    String oldValue, String newValue, String remarks,
-                    Long referenceId) {
+    public AuditLogResponse getFilteredAuditLogs(
+            String employeeSearch,
+            String module,
+            String action,
+            String user,
+            LocalDateTime dateFrom,
+            LocalDateTime dateTo,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
 
-        AuditLog log = new AuditLog();
-        log.setAuditId(generateAuditId());
-        log.setModule(module);
-        log.setAction(action);
-        log.setDescription(description);
-        log.setFieldChanged(fieldChanged);
-        log.setOldValue(oldValue);
-        log.setNewValue(newValue);
-        log.setRemarks(remarks);
-        log.setReferenceId(referenceId);
+        log.debug("Getting filtered audit logs");
 
-        if (subjectEmployee != null) {
-            log.setEmployeeId(subjectEmployee.getId());
-            log.setEmployeeName(subjectEmployee.getFullName());
-            log.setEmployeeCode(subjectEmployee.getEmployeeCode());
+        // Build specification
+        AuditSpecification spec = new AuditSpecification();
+
+        // Apply filters
+        if (employeeSearch != null && !employeeSearch.isEmpty()) {
+            spec.withEmployeeSearch(employeeSearch);
         }
 
-        populatePerformedBy(log);
-        populateRequestContext(log);
-
-        auditLogRepository.save(log);
-    }
-
-
-    // Add to AuditAction class
-    public static final String LOGIN = "Login";
-    public static final String LOGOUT = "Logout";
-
-    // Add to AuditModule class (if you want a separate AUTH module)
-    public static final String AUTH = "Authentication";
-
-    // Add to AuditService class
-    public void logLogin(Employee subjectEmployee, String status) {
-        log(AuditModule.AUTH,
-                AuditAction.LOGIN,
-                "User login " + status + ": " + subjectEmployee.getFullName() +
-                        " (" + subjectEmployee.getEmployeeCode() + ")",
-                subjectEmployee,
-                "Login",
-                null,
-                status,
-                "User authentication event",
-                subjectEmployee.getId());
-    }
-
-    public void logLogout(Employee subjectEmployee) {
-        log(AuditModule.AUTH,
-                AuditAction.LOGOUT,
-                "User logged out: " + subjectEmployee.getFullName(),
-                subjectEmployee,
-                subjectEmployee.getId());
-    }
-
-    /** Shorthand for simple actions with no field diff (View/Approval/etc.) */
-    public void log(String module, String action, String description,
-                    Employee subjectEmployee, Long referenceId) {
-        log(module, action, description, subjectEmployee, null, null, null, null, referenceId);
-    }
-
-    /** Special method for CREATE operations - no old value, only new value */
-    public void logCreate(String module, String description,
-                          Employee subjectEmployee, String newValue,
-                          String remarks, Long referenceId) {
-        log(module, AuditAction.CREATE, description, subjectEmployee,
-                "New Record", null, newValue, remarks, referenceId);
-    }
-
-    // ── Convenience wrappers specifically for Service Book ──
-    public void logServiceBookView(Employee subjectEmployee, Long serviceBookId) {
-        log(AuditModule.SERVICE_BOOK, AuditAction.VIEW,
-                "Service Book Viewed for " + subjectEmployee.getFullName(),
-                subjectEmployee, serviceBookId);
-    }
-
-    public void logServiceBookDownload(Employee subjectEmployee, Long serviceBookId, String fileName) {
-        log(AuditModule.SERVICE_BOOK, AuditAction.DOWNLOAD,
-                "Service Book PDF Downloaded",
-                subjectEmployee, "Document", null, fileName,
-                "Service book downloaded", serviceBookId);
-    }
-
-    // ── Convenience wrappers for Employee ──
-    public void logEmployeeCreate(Employee subjectEmployee) {
-        logCreate(AuditModule.EMPLOYEE,
-                "Employee created: " + subjectEmployee.getFullName() +
-                        " (" + subjectEmployee.getEmployeeCode() + ")",
-                subjectEmployee,
-                subjectEmployee.getFullName(),
-                "New employee created with role: " +
-                        (subjectEmployee.getRole() != null ? subjectEmployee.getRole().getName() : "N/A"),
-                subjectEmployee.getId());
-    }
-
-    public void logEmployeeUpdate(Employee subjectEmployee, String fieldChanged,
-                                  String oldValue, String newValue) {
-        log(AuditModule.EMPLOYEE, AuditAction.UPDATE,
-                "Employee updated: " + subjectEmployee.getFullName(),
-                subjectEmployee, fieldChanged, oldValue, newValue,
-                "Employee record updated", subjectEmployee.getId());
-    }
-
-    // ── Convenience wrappers for Promotion ──
-    public void logPromotionCreate(Employee subjectEmployee, Long promotionId) {
-        logCreate(AuditModule.PROMOTION,
-                "Promotion created for " + subjectEmployee.getFullName(),
-                subjectEmployee,
-                "New Promotion",
-                "Promotion record created",
-                promotionId);
-    }
-
-    public void logPromotionApproval(Employee subjectEmployee, Long promotionId, String remarks) {
-        log(AuditModule.PROMOTION, AuditAction.APPROVAL,
-                "Promotion approved for " + subjectEmployee.getFullName(),
-                subjectEmployee, "Status", "Pending", "Approved",
-                remarks, promotionId);
-    }
-
-    // ── Convenience wrappers for Transfer ──
-    public void logTransferCreate(Employee subjectEmployee, Long transferId) {
-        logCreate(AuditModule.TRANSFER,
-                "Transfer created for " + subjectEmployee.getFullName(),
-                subjectEmployee,
-                "New Transfer",
-                "Transfer record created",
-                transferId);
-    }
-
-    // ── Convenience wrappers for Documents ──
-    public void logDocumentUpload(Employee subjectEmployee, Long documentId, String fileName) {
-        log(AuditModule.DOCUMENTS, AuditAction.UPLOAD,
-                "Document uploaded: " + fileName,
-                subjectEmployee, "Document", null, fileName,
-                "Document uploaded to system", documentId);
-    }
-
-    // ── Audit ID Generator ──
-    private String generateAuditId() {
-        long sequence = AUDIT_SEQUENCE.incrementAndGet();
-        if (sequence > 999999) {
-            AUDIT_SEQUENCE.set(0);
-            sequence = AUDIT_SEQUENCE.incrementAndGet();
+        if (module != null && !module.isEmpty() && !"all".equalsIgnoreCase(module)) {
+            spec.withModule(module);
         }
-        String timestamp = LocalDateTime.now().format(DATE_FORMATTER);
-        return String.format("AUD-%s-%06d", timestamp, sequence);
+
+        if (action != null && !action.isEmpty() && !"all".equalsIgnoreCase(action)) {
+            spec.withAction(action);
+        }
+
+        if (user != null && !user.isEmpty()) {
+            spec.withPerformedBy(user);
+        }
+
+        if (dateFrom != null) {
+            spec.withEventTimeFrom(dateFrom);
+        }
+
+        if (dateTo != null) {
+            spec.withEventTimeTo(dateTo);
+        }
+
+        // Create pageable
+        Sort.Direction direction = Sort.Direction.fromString(
+                sortDirection != null ? sortDirection : "DESC"
+        );
+
+        String sortByField = sortBy != null ? sortBy : "eventTime";
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(direction, sortByField)
+        );
+
+        // Execute query
+        Page<AuditLog> auditLogPage = auditLogRepository.findAll(spec, pageable);
+
+        // Convert to DTOs
+        List<AuditLogDTO> dtoList = auditLogPage.getContent().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+
+        // Build response
+        return AuditLogResponse.builder()
+                .content(dtoList)
+                .page(auditLogPage.getNumber())
+                .size(auditLogPage.getSize())
+                .totalElements(auditLogPage.getTotalElements())
+                .totalPages(auditLogPage.getTotalPages())
+                .first(auditLogPage.isFirst())
+                .last(auditLogPage.isLast())
+                .build();
     }
 
-    private void populatePerformedBy(AuditLog log) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof Employee currentUser) {
-            log.setPerformedBy(currentUser.getFullName());
-            if (currentUser.getRole() != null) {
-                log.setPerformedByRole(currentUser.getRole().getName());
-            }
-        } else if (auth != null && auth.getName() != null) {
-            log.setPerformedBy(auth.getName());
-        }
+    public AuditLogDTO getAuditLogById(Long id) {
+        AuditLog auditLog = auditLogRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Audit log not found with id: " + id));
+        return convertToDTO(auditLog);
     }
 
-    private void populateRequestContext(AuditLog log) {
-        ServletRequestAttributes attrs =
-                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attrs == null) return;
+    @Transactional
+    public void saveAuditLog(AuditLog auditLog) {
+        auditLogRepository.save(auditLog);
+    }
 
-        HttpServletRequest request = attrs.getRequest();
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && !ip.isEmpty()) {
-            log.setIpAddress(ip.split(",")[0].trim());
-        } else {
-            log.setIpAddress(request.getRemoteAddr());
+    // ✅ METHOD 1: 5-parameter wala log method
+    @Transactional
+    public void log(String employeeSearch, String module, String action,
+                    Employee employee, Long referenceId) {
+
+        AuditLog auditLog = new AuditLog();
+
+        auditLog.setEmployeeName(employeeSearch);
+        auditLog.setEmployeeCode(employeeSearch);
+
+        if (employee != null) {
+            auditLog.setEmployeeId(employee.getId());
         }
-        log.setDevice(request.getHeader("User-Agent"));
+
+        auditLog.setModule(module);
+        auditLog.setAction(action);
+        auditLog.setPerformedBy(employeeSearch);
+        auditLog.setReferenceId(referenceId);
+
+        auditLogRepository.save(auditLog);
+
+        log.info("Audit log created for employee: {}, module: {}, action: {}", employeeSearch, module, action);
+    }
+
+    // ✅ METHOD 2: String wala 9-parameter log method
+    @Transactional
+    public void log(String employeeSearch, String module, String action,
+                    Employee employee, String performedBy,
+                    String description, String remarks, String ipAddress, Long referenceId) {
+
+        AuditLog auditLog = new AuditLog();
+
+        if (employee != null) {
+            auditLog.setEmployeeId(employee.getId());
+            auditLog.setEmployeeName(employeeSearch);
+            auditLog.setEmployeeCode(employeeSearch);
+        }
+
+        auditLog.setModule(module);
+        auditLog.setAction(action);
+        auditLog.setPerformedBy(performedBy);
+        auditLog.setDescription(description);
+        auditLog.setRemarks(remarks);
+        auditLog.setIpAddress(ipAddress);
+        auditLog.setReferenceId(referenceId);
+
+        auditLogRepository.save(auditLog);
+
+        log.info("Audit log created for employee: {}, module: {}, action: {}", employeeSearch, module, action);
+    }
+
+    // ✅ METHOD 3: Enum wala 9-parameter log method
+    @Transactional
+    public void log(AuditModule module, AuditAction action, String description,
+                    Employee employee, String objectType, String oldValue,
+                    String newValue, String remarks, Long referenceId) {
+
+        AuditLog auditLog = new AuditLog();
+
+        // Module aur Action ko Enum se String mein convert karein
+        auditLog.setModule(module.toString());
+        auditLog.setAction(action.toString());
+
+        auditLog.setDescription(description);
+
+        if (employee != null) {
+            auditLog.setEmployeeId(employee.getId());
+            auditLog.setEmployeeName(employee.toString());
+            auditLog.setEmployeeCode(employee.toString());
+        }
+
+        auditLog.setPerformedBy(employee != null ? employee.toString() : null);
+
+        // DTO se Data set karein
+        if (objectType != null) {
+            auditLog.setFieldChanged(objectType);
+        }
+        if (oldValue != null) {
+            auditLog.setOldValue(oldValue);
+        }
+        if (newValue != null) {
+            auditLog.setNewValue(newValue);
+        }
+        if (remarks != null) {
+            auditLog.setRemarks(remarks);
+        }
+
+        auditLog.setReferenceId(referenceId);
+
+        auditLogRepository.save(auditLog);
+
+        log.info("Audit log created for employee: {}, module: {}, action: {}", employee != null ? employee.toString() : "Unknown", module, action);
+    }
+
+    // ✅ METHOD 4: logLogin method (Naya add kiya)
+    @Transactional
+    public void logLogin(Employee employee, String ipAddress) {
+
+        AuditLog auditLog = new AuditLog();
+
+        auditLog.setModule("AUTH");
+        auditLog.setAction("LOGIN");
+        auditLog.setPerformedBy(employee != null ? employee.toString() : null);
+        auditLog.setDescription("User logged in");
+        auditLog.setIpAddress(ipAddress);
+
+        if (employee != null) {
+            auditLog.setEmployeeId(employee.getId());
+            auditLog.setEmployeeName(employee.toString());
+        }
+
+        auditLog.setReferenceId(employee != null ? employee.getId() : null);
+
+        auditLogRepository.save(auditLog);
+
+        log.info("Login audit log created for employee: {}, ip: {}", employee != null ? employee.toString() : "Unknown", ipAddress);
+    }
+
+    private AuditLogDTO convertToDTO(AuditLog auditLog) {
+        return AuditLogDTO.builder()
+                .id(auditLog.getId())
+                .auditId(auditLog.getAuditId())
+                .eventTime(auditLog.getEventTime())
+                .performedBy(auditLog.getPerformedBy())
+                .performedByRole(auditLog.getPerformedByRole())
+                .module(auditLog.getModule())
+                .action(auditLog.getAction())
+                .description(auditLog.getDescription())
+                .employeeId(auditLog.getEmployeeId())
+                .employeeName(auditLog.getEmployeeName())
+                .employeeCode(auditLog.getEmployeeCode())
+                .fieldChanged(auditLog.getFieldChanged())
+                .oldValue(auditLog.getOldValue())
+                .newValue(auditLog.getNewValue())
+                .remarks(auditLog.getRemarks())
+                .ipAddress(auditLog.getIpAddress())
+                .device(auditLog.getDevice())
+                .referenceId(auditLog.getReferenceId())
+                .build();
     }
 }

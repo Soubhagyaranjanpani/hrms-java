@@ -4,6 +4,9 @@ import com.hrms.appointment.domain.AppointmentRecord;
 import com.hrms.appointment.dto.AppointmentRecordResponse;
 import com.hrms.appointment.dto.CreateAppointmentRequest;
 import com.hrms.appointment.infrastructure.AppointmentRepository;
+import com.hrms.audit.application.AuditService;
+import com.hrms.audit.domain.AuditAction;
+import com.hrms.audit.domain.AuditModule;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.domain.EmployeeDesignation;
 import com.hrms.employee.infrastructure.EmployeeDesignationRepository;
@@ -38,6 +41,7 @@ public class CreateAppointmentUseCase {
     private final AppointmentMapper mapper;
     private final PdfAppointmentLetterGenerator letterGenerator;
     private final AppointmentDocumentStorageService storageService;
+    private final AuditService auditService;
 
     public AppointmentRecordResponse execute(CreateAppointmentRequest req) {
         Employee emp = empRepo.findById(req.getEmployeeId())
@@ -48,8 +52,6 @@ public class CreateAppointmentUseCase {
         r.setAppointmentOrderNumber(req.getAppointmentOrderNumber());
 
         // ── Initial designation / department / branch ──
-        // Unlike Promotion, an appointment has no "old value" to fall back on — these
-        // are always the values chosen in the form's Initial Designation/Department/Branch dropdowns.
         Designation initialDesig = designationRepo.findById(req.getInitialDesignationId())
                 .orElseThrow(() -> new RuntimeException("Initial designation not found"));
         r.setInitialDesignation(initialDesig);
@@ -62,7 +64,7 @@ public class CreateAppointmentUseCase {
                 .orElseThrow(() -> new RuntimeException("Initial branch not found"));
         r.setInitialBranch(initialBranch);
 
-        // ── Appointment type / Employment type (resolved from master tables) ──
+        // ── Appointment type / Employment type ──
         AppointmentType appointmentType = appointmentTypeRepo.findById(req.getAppointmentTypeId())
                 .orElseThrow(() -> new RuntimeException("Appointment type not found"));
         r.setAppointmentType(appointmentType);
@@ -77,7 +79,7 @@ public class CreateAppointmentUseCase {
         r.setJoiningDate(req.getJoiningDate() != null ? req.getJoiningDate() : date);
         r.setProbationPeriodMonths(req.getProbationPeriodMonths() != null ? req.getProbationPeriodMonths() : 6);
 
-        // ── Authority ── (an EmployeeDesignation — a person holding a role, not a plain Designation)
+        // ── Authority ──
         EmployeeDesignation authority = employeeDesignationRepo.findById(req.getAppointmentAuthorityId())
                 .orElseThrow(() -> new RuntimeException("Appointment authority not found"));
         r.setAppointmentAuthority(authority);
@@ -89,12 +91,16 @@ public class CreateAppointmentUseCase {
 
         AppointmentRecord saved = appointmentRepo.save(r);
 
-        // Update the employee's live department/branch to reflect this appointment immediately.
+        // Update the employee's live department/branch
+        String oldDepartment = emp.getDepartment() != null ? emp.getDepartment().getName() : "None";
+        String oldBranch = emp.getBranch() != null ? emp.getBranch().getName() : "None";
+
         emp.setDepartment(initialDept);
         emp.setBranch(initialBranch);
         empRepo.save(emp);
 
-        // Auto-generate the appointment letter and persist its path/name on the record
+        // Auto-generate the appointment letter
+        boolean letterGenerated = false;
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
@@ -102,8 +108,54 @@ public class CreateAppointmentUseCase {
             saved.setDocumentPath(path);
             saved.setDocumentName(storageService.fileNameOf(path));
             saved = appointmentRepo.save(saved);
+            letterGenerated = true;
         } catch (Exception e) {
             System.err.println("Failed to auto-generate appointment letter for id " + saved.getId() + ": " + e.getMessage());
+        }
+
+        // Audit Log 1 - Main appointment creation
+        auditService.log(
+                AuditModule.APPOINTMENT,
+                AuditAction.CREATE,
+                "Appointment created: " + saved.getAppointmentOrderNumber() +
+                        " for " + emp.getFullName() + " (" + emp.getEmployeeCode() + ")",
+                emp,
+                "Appointment Record",
+                null,
+                "Designation: " + initialDesig.getName() +
+                        ", Type: " + appointmentType.getAppointmentType(),
+                "New appointment record created",
+                saved.getId()
+        );
+
+        // Audit Log 2 - Employee department/branch update
+        if (!oldDepartment.equals(initialDept.getName()) || !oldBranch.equals(initialBranch.getName())) {
+            auditService.log(
+                    AuditModule.EMPLOYEE,
+                    AuditAction.UPDATE,
+                    "Employee department/branch updated due to appointment",
+                    emp,
+                    "Department/Branch",
+                    oldDepartment + " / " + oldBranch,
+                    initialDept.getName() + " / " + initialBranch.getName(),
+                    "Updated due to appointment: " + saved.getAppointmentOrderNumber(),
+                    emp.getId()
+            );
+        }
+
+        // Audit Log 3 - Document generation (if successful)
+        if (letterGenerated) {
+            auditService.log(
+                    AuditModule.DOCUMENTS,
+                    AuditAction.UPLOAD,
+                    "Appointment letter generated: " + saved.getDocumentName(),
+                    emp,
+                    "Document",
+                    null,
+                    saved.getDocumentName(),
+                    "Auto-generated appointment letter",
+                    saved.getId()
+            );
         }
 
         return mapper.toResponse(saved);

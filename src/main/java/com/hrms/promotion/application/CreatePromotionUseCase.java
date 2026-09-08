@@ -1,5 +1,8 @@
 package com.hrms.promotion.application;
 
+import com.hrms.audit.application.AuditService;
+import com.hrms.audit.domain.AuditAction;
+import com.hrms.audit.domain.AuditModule;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.domain.EmployeeDesignation;
 import com.hrms.employee.domain.EmployeeGrade;
@@ -31,7 +34,7 @@ import java.util.List;
 public class CreatePromotionUseCase {
 
     private final PromotionRepository promoRepo;
-    private final EmployeeRepository  empRepo;
+    private final EmployeeRepository empRepo;
     private final DesignationRepository designationRepo;
     private final DepartmentRepository departmentRepo;
     private final BranchRepository branchRepo;
@@ -42,6 +45,7 @@ public class CreatePromotionUseCase {
     private final PromotionMapper mapper;
     private final PdfPromotionLetterGenerator letterGenerator;
     private final PromotionDocumentStorageService storageService;
+    private final AuditService auditService;
 
     public PromotionRecordResponse execute(CreatePromotionRequest req) {
         Employee emp = empRepo.findById(req.getEmployeeId())
@@ -56,7 +60,6 @@ public class CreatePromotionUseCase {
         r.setPromotionType(type);
 
         // ── Designation ──
-        // Old designation: explicit id, else the employee's current active EmployeeDesignation record
         Designation oldDesig;
         if (req.getOldDesignationId() != null) {
             oldDesig = designationRepo.findById(req.getOldDesignationId())
@@ -75,7 +78,6 @@ public class CreatePromotionUseCase {
         r.setNewDesignation(newDesig);
 
         // ── Department ──
-        // Old department: explicit id, else the employee's current department (direct field on Employee)
         Department oldDept;
         if (req.getOldDepartmentId() != null) {
             oldDept = departmentRepo.findById(req.getOldDepartmentId())
@@ -94,7 +96,6 @@ public class CreatePromotionUseCase {
         r.setNewDepartment(newDept);
 
         // ── Branch ──
-        // Old branch: explicit id > employee's current branch > old department's branch
         Branch oldBranch;
         if (req.getOldBranchId() != null) {
             oldBranch = branchRepo.findById(req.getOldBranchId())
@@ -109,7 +110,6 @@ public class CreatePromotionUseCase {
         }
         r.setOldBranch(oldBranch);
 
-        // New branch: explicit id > new department's branch
         Branch newBranch;
         if (req.getNewBranchId() != null) {
             newBranch = branchRepo.findById(req.getNewBranchId())
@@ -128,7 +128,7 @@ public class CreatePromotionUseCase {
             prevGrade = gradeRepo.findById(req.getPreviousGradeId())
                     .orElseThrow(() -> new RuntimeException("Previous grade not found"));
         } else {
-            prevGrade = emp.getGrade(); // may be null if employee has no grade yet
+            prevGrade = emp.getGrade();
         }
         r.setPreviousGrade(prevGrade);
 
@@ -137,9 +137,6 @@ public class CreatePromotionUseCase {
         r.setNewGrade(newGrade);
 
         // ── Salary ──
-        // If oldSalary isn't supplied explicitly, fall back to the employee's most recent
-        // payroll record's grossEarnings. Swap to getBasicSalary()/getNetSalary() if your
-        // business considers a different figure to be "salary" for this purpose.
         Double oldSalary = req.getOldSalary();
         if (oldSalary == null) {
             List<PayrollRecord> history = payrollRepo
@@ -155,7 +152,7 @@ public class CreatePromotionUseCase {
         r.setPromotionYear(String.valueOf(date.getYear()));
         r.setEffectiveDate(req.getEffectiveDate() != null ? req.getEffectiveDate() : date);
 
-        // ── Authority ── (this is an EmployeeDesignation — a person holding a role, not a plain Designation)
+        // ── Authority ──
         EmployeeDesignation authority = employeeDesignationRepo.findById(req.getPromotionAuthorityId())
                 .orElseThrow(() -> new RuntimeException("Promotion authority not found"));
         r.setPromotionAuthority(authority);
@@ -167,15 +164,14 @@ public class CreatePromotionUseCase {
 
         PromotionRecord saved = promoRepo.save(r);
 
-        // Update the employee's live department/grade/branch to reflect the promotion immediately.
-        // Remove this block if promotions in your workflow should only take effect after a
-        // separate approve/process step rather than instantly on creation.
+        // Update the employee's live department/grade/branch
         emp.setDepartment(newDept);
         emp.setGrade(newGrade);
         emp.setBranch(newBranch);
         empRepo.save(emp);
 
-        // Auto-generate the promotion letter and persist its path/name on the record
+        // Auto-generate the promotion letter
+        boolean letterGenerated = false;
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
@@ -183,8 +179,109 @@ public class CreatePromotionUseCase {
             saved.setDocumentPath(path);
             saved.setDocumentName(storageService.fileNameOf(path));
             saved = promoRepo.save(saved);
+            letterGenerated = true;
         } catch (Exception e) {
             System.err.println("Failed to auto-generate promotion letter for id " + saved.getId() + ": " + e.getMessage());
+        }
+
+        // ── AUDIT LOGGING ──
+
+        // 1. Main promotion creation audit
+        auditService.log(
+                AuditModule.PROMOTION,
+                AuditAction.CREATE,
+                "Promotion created for " + emp.getFullName() +
+                        " (" + emp.getEmployeeCode() + ")",
+                emp,
+                "Promotion Record",
+                null,
+                "Order: " + saved.getPromotionOrderNumber() +
+                        ", Type: " + type.toString(),
+                "Promotion from " + oldDesig.getName() + " to " + newDesig.getName() +
+                        (req.getRemarks() != null ? ", Remarks: " + req.getRemarks() : ""),
+                saved.getId()
+        );
+
+        // 2. Designation change audit
+        auditService.log(
+                AuditModule.PROMOTION,
+                AuditAction.UPDATE,
+                "Designation changed for " + emp.getFullName(),
+                emp,
+                "Designation",
+                oldDesig.getName(),
+                newDesig.getName(),
+                "Promotion: " + saved.getPromotionOrderNumber(),
+                saved.getId()
+        );
+
+        // 3. Department change audit
+        auditService.log(
+                AuditModule.PROMOTION,
+                AuditAction.UPDATE,
+                "Department changed for " + emp.getFullName(),
+                emp,
+                "Department",
+                oldDept.getName(),
+                newDept.getName(),
+                "Promotion: " + saved.getPromotionOrderNumber(),
+                saved.getId()
+        );
+
+        // 4. Branch change audit
+        auditService.log(
+                AuditModule.PROMOTION,
+                AuditAction.UPDATE,
+                "Branch changed for " + emp.getFullName(),
+                emp,
+                "Branch",
+                oldBranch.getName(),
+                newBranch.getName(),
+                "Promotion: " + saved.getPromotionOrderNumber(),
+                saved.getId()
+        );
+
+        // 5. Grade change audit
+        if (prevGrade != null || newGrade != null) {
+            auditService.log(
+                    AuditModule.PROMOTION,
+                    AuditAction.UPDATE,
+                    "Grade changed for " + emp.getFullName(),
+                    emp,
+                    "Grade",
+                    prevGrade != null ? prevGrade.toString() : "None",
+                    newGrade != null ? newGrade.toString() : "None",
+                    "Promotion: " + saved.getPromotionOrderNumber(),
+                    saved.getId()
+            );
+        }
+
+        // 6. Salary change audit
+        auditService.log(
+                AuditModule.PROMOTION,
+                AuditAction.UPDATE,
+                "Salary changed for " + emp.getFullName(),
+                emp,
+                "Salary",
+                String.valueOf(oldSalary),
+                String.valueOf(saved.getNewSalary()),
+                "Promotion: " + saved.getPromotionOrderNumber(),
+                saved.getId()
+        );
+
+        // 7. Document generation audit (if successful)
+        if (letterGenerated) {
+            auditService.log(
+                    AuditModule.DOCUMENTS,
+                    AuditAction.UPLOAD,
+                    "Promotion letter generated: " + saved.getDocumentName(),
+                    emp,
+                    "Document",
+                    null,
+                    saved.getDocumentName(),
+                    "Auto-generated promotion letter",
+                    saved.getId()
+            );
         }
 
         return mapper.toResponse(saved);

@@ -1,5 +1,8 @@
 package com.hrms.disciplinary.application;
 
+import com.hrms.audit.application.AuditService;
+import com.hrms.audit.domain.AuditAction;
+import com.hrms.audit.domain.AuditModule;
 import com.hrms.disciplinary.domain.DisciplinaryRecord;
 import com.hrms.disciplinary.dto.CreateDisciplinaryRequest;
 import com.hrms.disciplinary.dto.DisciplinaryRecordResponse;
@@ -30,6 +33,7 @@ public class CreateDisciplinaryUseCase {
     private final DisciplinaryMapper mapper;
     private final PdfDisciplinaryLetterGenerator letterGenerator;
     private final DisciplinaryDocumentStorageService storageService;
+    private final AuditService auditService;
 
     @Transactional
     public DisciplinaryRecordResponse execute(CreateDisciplinaryRequest req) {
@@ -37,21 +41,21 @@ public class CreateDisciplinaryUseCase {
         Employee emp = empRepo.findById(req.getEmployeeId())
                 .orElseThrow(() -> new RuntimeException("Employee not found with ID: " + req.getEmployeeId()));
 
-        // 2. Fetch Action Type - Dropdown 1
+        // 2. Fetch Action Type
         ActionType actionType = null;
         if (req.getActionTypeId() != null) {
             actionType = actionTypeRepo.findById(req.getActionTypeId())
                     .orElseThrow(() -> new RuntimeException("Action Type not found with ID: " + req.getActionTypeId()));
         }
 
-        // 3. Fetch Penalty Type - Dropdown 3
+        // 3. Fetch Penalty Type
         PenaltyType penaltyType = null;
         if (req.getPenaltyTypeId() != null) {
             penaltyType = penaltyTypeRepo.findById(req.getPenaltyTypeId())
                     .orElseThrow(() -> new RuntimeException("Penalty Type not found with ID: " + req.getPenaltyTypeId()));
         }
 
-        // 4. Fetch Investigation Officer - Dropdown 2
+        // 4. Fetch Investigation Officer
         EmployeeDesignation officer = null;
         if (req.getInvestigationOfficerId() != null) {
             officer = employeeDesignationRepo.findById(req.getInvestigationOfficerId())
@@ -85,6 +89,7 @@ public class CreateDisciplinaryUseCase {
         DisciplinaryRecord saved = disciplinaryRepo.save(r);
 
         // 7. Auto-generate disciplinary letter
+        boolean letterGenerated = false;
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
@@ -92,8 +97,43 @@ public class CreateDisciplinaryUseCase {
             saved.setDocumentPath(path);
             saved.setDocumentName(storageService.fileNameOf(path));
             saved = disciplinaryRepo.save(saved);
+            letterGenerated = true;
         } catch (Exception e) {
             System.err.println("Failed to auto-generate disciplinary letter: " + e.getMessage());
+        }
+
+        // ── AUDIT LOGGING (Consolidated) ──
+
+        // Main disciplinary record creation with all details
+        String disciplinaryDetails = "Case: " + saved.getCaseNumber() +
+                ", Action: " + (actionType != null ? actionType.toString() : "N/A") +
+                ", Penalty: " + (penaltyType != null ? penaltyType.toString() : "N/A") +
+                ", Officer: " + (officer != null ? officer.toString() : "N/A");
+
+        auditService.log(
+                AuditModule.DISCIPLINARY,
+                AuditAction.CREATE,
+                "Disciplinary record created for " + emp.getFullName() +
+                        " (" + emp.getEmployeeCode() + ")",
+                emp,
+                "Disciplinary Record",
+                null,
+                disciplinaryDetails,
+                "Incident Date: " + saved.getIncidentDate() +
+                        (saved.getResolutionDate() != null ? ", Resolution Date: " + saved.getResolutionDate() : "") +
+                        (req.getRemarks() != null ? ", Remarks: " + req.getRemarks() : ""),
+                saved.getId()
+        );
+
+        // Document generation audit
+        if (letterGenerated) {
+            auditService.log(
+                    AuditModule.DOCUMENTS,
+                    AuditAction.UPLOAD,
+                    "Disciplinary letter generated: " + saved.getDocumentName(),
+                    emp,
+                    saved.getId()
+            );
         }
 
         return mapper.toResponse(saved);

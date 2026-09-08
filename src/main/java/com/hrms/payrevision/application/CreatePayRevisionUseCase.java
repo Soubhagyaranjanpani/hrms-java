@@ -1,9 +1,12 @@
 package com.hrms.payrevision.application;
 
+import com.hrms.audit.application.AuditService;
+import com.hrms.audit.domain.AuditAction;
+import com.hrms.audit.domain.AuditModule;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
-import com.hrms.master.domain.RevisionReason;  // ← Master se import
-import com.hrms.master.infrastructure.RevisionReasonRepository;  // ← Master repository
+import com.hrms.master.domain.RevisionReason;
+import com.hrms.master.infrastructure.RevisionReasonRepository;
 import com.hrms.payrevision.domain.PayRevisionRecord;
 import com.hrms.payrevision.dto.CreatePayRevisionRequest;
 import com.hrms.payrevision.dto.PayRevisionRecordResponse;
@@ -20,10 +23,11 @@ public class CreatePayRevisionUseCase {
 
     private final PayRevisionRepository payRevisionRepo;
     private final EmployeeRepository empRepo;
-    private final RevisionReasonRepository reasonRepo;  // ← Master repository
+    private final RevisionReasonRepository reasonRepo;
     private final PayRevisionMapper mapper;
     private final PdfPayRevisionLetterGenerator letterGenerator;
     private final PayRevisionDocumentStorageService storageService;
+    private final AuditService auditService;
 
     public PayRevisionRecordResponse execute(CreatePayRevisionRequest req) {
         Employee emp = empRepo.findById(req.getEmployeeId())
@@ -50,7 +54,7 @@ public class CreatePayRevisionUseCase {
         r.setRevisedPayScaleMin(req.getRevisedPayScaleMin());
         r.setRevisedPayScaleMax(req.getRevisedPayScaleMax());
 
-        // ✅ Master RevisionReason se find karo
+        // Master RevisionReason se find karo
         RevisionReason reason = reasonRepo.findById(req.getReasonId())
                 .orElseThrow(() -> new RuntimeException("Pay revision reason not found"));
 
@@ -64,6 +68,8 @@ public class CreatePayRevisionUseCase {
 
         PayRevisionRecord saved = payRevisionRepo.save(r);
 
+        // Auto-generate pay revision letter
+        boolean letterGenerated = false;
         try {
             byte[] pdfBytes = letterGenerator.generateLetter(saved);
             String path = storageService.saveGenerated(saved.getId(), emp.getEmployeeCode(), pdfBytes);
@@ -71,8 +77,58 @@ public class CreatePayRevisionUseCase {
             saved.setDocumentPath(path);
             saved.setDocumentName(storageService.fileNameOf(path));
             saved = payRevisionRepo.save(saved);
+            letterGenerated = true;
         } catch (Exception e) {
             System.err.println("Failed to auto-generate pay revision letter for id " + saved.getId() + ": " + e.getMessage());
+        }
+
+        // ── AUDIT LOGGING ──
+
+        // 1. Main pay revision creation audit
+        auditService.log(
+                AuditModule.PAY_REVISION,
+                AuditAction.CREATE,
+                "Pay revision created for " + emp.getFullName() +
+                        " (" + emp.getEmployeeCode() + ")",
+                emp,
+                "Pay Revision Record",
+                null,
+                "Order: " + saved.getPayRevisionOrderNumber(),
+                "Pay scale revised from " + saved.getPreviousPayScaleMin() + "-" +
+                        saved.getPreviousPayScaleMax() + " to " +
+                        saved.getRevisedPayScaleMin() + "-" + saved.getRevisedPayScaleMax() +
+                        ", Reason: " + reason.toString() +
+                        ", Effective Date: " + saved.getEffectiveDate() +
+                        (req.getRemarks() != null ? ", Remarks: " + req.getRemarks() : ""),
+                saved.getId()
+        );
+
+        // 2. Pay scale change audit
+        auditService.log(
+                AuditModule.PAY_REVISION,
+                AuditAction.UPDATE,
+                "Pay scale revised for " + emp.getFullName(),
+                emp,
+                "Pay Scale",
+                saved.getPreviousPayScaleMin() + "-" + saved.getPreviousPayScaleMax(),
+                saved.getRevisedPayScaleMin() + "-" + saved.getRevisedPayScaleMax(),
+                "Pay revision order: " + saved.getPayRevisionOrderNumber(),
+                saved.getId()
+        );
+
+        // 3. Document generation audit (if successful)
+        if (letterGenerated) {
+            auditService.log(
+                    AuditModule.DOCUMENTS,
+                    AuditAction.UPLOAD,
+                    "Pay revision letter generated: " + saved.getDocumentName(),
+                    emp,
+                    "Document",
+                    null,
+                    saved.getDocumentName(),
+                    "Auto-generated pay revision letter",
+                    saved.getId()
+            );
         }
 
         return mapper.toResponse(saved);

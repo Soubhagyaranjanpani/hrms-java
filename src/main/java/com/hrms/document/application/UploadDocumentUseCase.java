@@ -5,7 +5,7 @@ import com.hrms.document.domain.enums.DocumentCategory;
 import com.hrms.document.infrastructure.EmployeeDocumentRepository;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
-import com.hrms.audit.application.AuditLogService;
+import com.hrms.audit.application.AuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,7 @@ public class UploadDocumentUseCase {
 
     private final EmployeeRepository employeeRepo;
     private final EmployeeDocumentRepository documentRepo;
-    private final AuditLogService audit;
+    private final AuditService audit; // ✅ AuditLogService ko AuditService se replace kiya
 
     @Value("${upload.dir}")
     private String uploadDir;
@@ -86,8 +86,14 @@ public class UploadDocumentUseCase {
             EmployeeDocument savedDoc = documentRepo.save(doc);
             System.out.println("Document saved to database with ID: " + savedDoc.getId());
 
-            // Audit log
-            audit.log("DOCUMENT", savedDoc.getId(), "DOCUMENT_UPLOADED", user, null, savedDoc);
+            // ✅ Audit log - Yahan AuditService ka sahi method use kiya hai
+            audit.log(
+                    "DOCUMENT",            // String 1: employeeSearch (jaise user ka naam)
+                    "DOCUMENT_UPLOADED",   // String 2: module
+                    user,                  // String 3: action
+                    emp,                   // Employee: emp
+                    savedDoc.getId()       // Long: referenceId
+            );
 
             return "Document uploaded successfully";
 

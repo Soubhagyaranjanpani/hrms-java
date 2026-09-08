@@ -1,51 +1,40 @@
+// File: com/hrms/audit/application/GetAuditLogsUseCase.java
 package com.hrms.audit.application;
 
-import com.hrms.audit.domain.AuditLog;
+import com.hrms.audit.dto.AuditFilterRequest;
+import com.hrms.audit.dto.AuditLogDTO;
 import com.hrms.audit.dto.AuditLogResponse;
-import com.hrms.audit.infrastructure.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class GetAuditLogsUseCase {
 
-    private final AuditLogRepository auditRepo;
+    private final AuditLogServiceImpl auditLogService;  // Use implementation directly
 
-    public List<AuditLogResponse> getByEntity(String entity, Long entityId) {
+    public AuditLogResponse execute(AuditFilterRequest filterRequest) {
+        log.debug("Executing GetAuditLogsUseCase");
 
-        return auditRepo.findByModuleAndReferenceId(entity, entityId)
-                .stream().map(this::map).collect(Collectors.toList());
+        return auditLogService.getFilteredAuditLogs(
+                filterRequest.getEmployeeSearch(),
+                filterRequest.getModule(),
+                filterRequest.getAction(),
+                filterRequest.getUser(),
+                filterRequest.getDateFrom() != null ? filterRequest.getDateFrom().atStartOfDay() : null,
+                filterRequest.getDateTo() != null ? filterRequest.getDateTo().atTime(23, 59, 59) : null,
+                filterRequest.getPage(),
+                filterRequest.getSize(),
+                filterRequest.getSortBy(),
+                filterRequest.getSortDirection()
+        );
     }
 
-    public List<AuditLogResponse> getByUser(String user) {
-
-        return auditRepo.findByPerformedBy(user)
-                .stream().map(this::map).collect(Collectors.toList());
-    }
-
-    public List<AuditLogResponse> getByDateRange(LocalDateTime start, LocalDateTime end) {
-
-        return auditRepo.findByEventTimeBetween(start, end)
-                .stream().map(this::map).collect(Collectors.toList());
-    }
-
-    private AuditLogResponse map(AuditLog log) {
-
-        AuditLogResponse res = new AuditLogResponse();
-
-        res.setEntityName(log.getModule());
-        res.setEntityId(log.getReferenceId());
-        res.setAction(log.getAction());
-        res.setPerformedBy(log.getPerformedBy());
-        res.setTimestamp(log.getEventTime());
-        res.setOldValue(log.getOldValue());
-        res.setNewValue(log.getNewValue());
-
-        return res;
+    public AuditLogDTO getAuditLogById(Long id) {
+        return auditLogService.getAuditLogById(id);
     }
 }
