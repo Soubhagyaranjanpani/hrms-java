@@ -1,6 +1,6 @@
 package com.hrms.employee.application;
 
-import com.hrms.audit.application.AuditLogService;
+import com.hrms.audit.application.AuditService;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.security.DefaultResponse;
 import com.hrms.common.utils.ResponseUtils;
@@ -21,14 +21,14 @@ public class CreateFirstEmployeeUseCase {
 
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuditLogService auditLogService;
+    private final AuditService auditService;
     private final RoleRepository roleRepository;
 
     public ApiResponse<DefaultResponse> execute(EmployeeCreationReq request) {
 
         // 🔹 1. Check existing employee
         if (employeeRepository.existsByEmail(request.getEmail())) {
-            return ResponseUtils.createFailureResponse(null,null,"Employee already exists",400);
+            return ResponseUtils.createFailureResponse(null, null, "Employee already exists", 400);
         }
 
         // 🔹 2. Fetch Role (MANDATORY)
@@ -61,13 +61,12 @@ public class CreateFirstEmployeeUseCase {
         employeeRepository.save(emp);
 
         // 🔹 5. Audit
-        auditLogService.log(
-                "EMPLOYEE",
-                emp.getId(),
-                "CREATE",
-                request.getEmail(),
-                null,
-                emp
+        auditService.log(
+                request.getEmail(),   // employeeSearch (used as performedBy/name/code)
+                "EMPLOYEE",           // module
+                "CREATE",             // action
+                emp,                  // employee
+                emp.getId()           // referenceId
         );
 
         // 🔹 6. Response

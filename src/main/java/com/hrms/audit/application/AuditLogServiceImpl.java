@@ -23,11 +23,28 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class AuditLogServiceImpl {  // Removed "implements AuditLogService"
+public class AuditLogServiceImpl implements AuditLogService {  // ✅ implements restored
 
     private final AuditLogRepository auditLogRepository;
 
-    // Removed @Override
+    @Override
+    public void log(String entity, Long entityId, String action,
+                    String performedBy, Object oldValue, Object newValue) {
+
+        AuditLog auditLog = new AuditLog();
+        auditLog.setModule(entity);
+        auditLog.setReferenceId(entityId);
+        auditLog.setAction(action);
+        auditLog.setPerformedBy(performedBy);
+        auditLog.setOldValue(oldValue != null ? oldValue.toString() : null);
+        auditLog.setNewValue(newValue != null ? newValue.toString() : null);
+
+        auditLogRepository.save(auditLog);
+
+        log.info("Audit log created for entity: {}, action: {}, performedBy: {}",
+                entity, action, performedBy);
+    }
+
     public AuditLogResponse getFilteredAuditLogs(
             String employeeSearch,
             String module,
@@ -42,55 +59,40 @@ public class AuditLogServiceImpl {  // Removed "implements AuditLogService"
 
         log.debug("Getting filtered audit logs");
 
-        // Build specification
         AuditSpecification spec = new AuditSpecification();
 
-        // Apply filters
         if (employeeSearch != null && !employeeSearch.isEmpty()) {
             spec.withEmployeeSearch(employeeSearch);
         }
-
         if (module != null && !module.isEmpty() && !"all".equalsIgnoreCase(module)) {
             spec.withModule(module);
         }
-
         if (action != null && !action.isEmpty() && !"all".equalsIgnoreCase(action)) {
             spec.withAction(action);
         }
-
         if (user != null && !user.isEmpty()) {
             spec.withPerformedBy(user);
         }
-
         if (dateFrom != null) {
             spec.withEventTimeFrom(dateFrom);
         }
-
         if (dateTo != null) {
             spec.withEventTimeTo(dateTo);
         }
 
-        // Create pageable
         Sort.Direction direction = Sort.Direction.fromString(
                 sortDirection != null ? sortDirection : "DESC"
         );
 
         String sortByField = sortBy != null ? sortBy : "eventTime";
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(direction, sortByField)
-        );
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortByField));
 
-        // Execute query
         Page<AuditLog> auditLogPage = auditLogRepository.findAll(spec, pageable);
 
-        // Convert to DTOs
         List<AuditLogDTO> dtoList = auditLogPage.getContent().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
 
-        // Build response
         return AuditLogResponse.builder()
                 .content(dtoList)
                 .page(auditLogPage.getNumber())
@@ -102,14 +104,12 @@ public class AuditLogServiceImpl {  // Removed "implements AuditLogService"
                 .build();
     }
 
-    // Removed @Override
     public AuditLogDTO getAuditLogById(Long id) {
         AuditLog auditLog = auditLogRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Audit log not found with id: " + id));
         return convertToDTO(auditLog);
     }
 
-    // Removed @Override
     @Transactional
     public void saveAuditLog(AuditLog auditLog) {
         auditLogRepository.save(auditLog);
