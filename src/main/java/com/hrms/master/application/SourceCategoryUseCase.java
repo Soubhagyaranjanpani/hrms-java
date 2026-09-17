@@ -2,20 +2,25 @@ package com.hrms.master.application;
 
 
 
+import com.hrms.common.security.CurrentUser;
 import com.hrms.master.domain.SourceCategory;
 import com.hrms.master.dto.SourceCategoryCreateReq;
 import com.hrms.master.dto.SourceCategoryResponse;
 import com.hrms.master.infrastructure.SourceCategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class SourceCategoryUseCase {
-
-    private SourceCategoryRepository sourceCategoryRepository;
+    @Autowired
+    private  final  SourceCategoryRepository sourceCategoryRepository;
+    @Autowired
+    private final CurrentUser currentUser;
 
 
 
@@ -32,8 +37,11 @@ public class SourceCategoryUseCase {
 
         response.setId(saved.getId());
         response.setName(saved.getName());
+        response.setStatus("Y");
+
         response.setActive(saved.getActive());
-        response.setCreatedBy(saved.getCreatedBy());
+        response.setCreateAt(LocalDateTime.now());
+        response.setCreatedBy(currentUser.getEmployee().getFirstName());
 //        response.setUpdatedBy(saved.getUpdatedBy());
 
         return response;

@@ -8,4 +8,5 @@ import lombok.Setter;
 @Setter
 public class SourceCategoryCreateReq {
     private  String name;
+    private String status;
 }

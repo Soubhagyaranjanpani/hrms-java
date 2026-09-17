@@ -30,7 +30,7 @@ public class SourceCategoryController {
     }
 
 
-    @PutMapping("/update")
+    @PutMapping("/update/{id}")
     public SourceCategoryResponse updateSourceCategory(@PathVariable Long id,
                                                        @RequestBody SourceCategoryCreateReq request){
         return sourceCategoryUseCase.updateSourceCategory(id, request);
