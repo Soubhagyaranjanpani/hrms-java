@@ -50,7 +50,7 @@ public class LoginEmployeeUseCase {
                 .build();
 
         // Audit Log - Login success
-        auditService.logLogin(employee, "SUCCESS");
+//        auditService.logLogin(employee, "SUCCESS");
 
         employee.setLastLogin(LocalDateTime.now());
         employeeRepository.save(employee);

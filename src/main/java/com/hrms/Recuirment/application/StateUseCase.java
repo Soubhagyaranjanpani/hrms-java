@@ -37,6 +37,11 @@ public class StateUseCase {
         return stateList;
     }
 
+    public List<StateResponse> getStateByCountryId(Long id){
+        List<StateResponse> state=stateRepository.findByCountryId(id).stream().map(this::todto).toList();
+        return state;
+    }
+
     public StateResponse updateById(Long id, StateCreateReq updatedData) {
         State existingData=stateRepository.findById(id)
                 .orElseThrow(()->new RuntimeException("state not found by id"+id));
@@ -71,7 +76,7 @@ public class StateUseCase {
             return "state not found";
         }
     }
-    private StateResponse todto(State state) {
+    public StateResponse todto(State state) {
         StateResponse res=new StateResponse();
         res.setId(state.getId());
         res.setStateCode(state.getStateCode());

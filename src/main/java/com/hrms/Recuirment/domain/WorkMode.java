@@ -7,22 +7,19 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="state")
+@Table(name="workmode")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-
-public class State {
+public class WorkMode {
     @Id
-    @GeneratedValue(strategy= GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="id")
     private Long id;
-    @Column(name="stateCode")
-    private String stateCode;
-    @Column(name="stateName")
-    private String stateName;
+    @Column(name="workMode",updatable = false)
+    private String workModeName;
     @Column(name="status")
     private String status;
     @CreationTimestamp
@@ -30,9 +27,4 @@ public class State {
     private LocalDateTime createdAt;
     @Column(name="created_by")
     private String createdBy;
-
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "country_id", nullable = false)
-    private Country country;
-
 }

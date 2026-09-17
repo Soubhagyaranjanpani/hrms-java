@@ -66,6 +66,7 @@ public class SecurityConfig {
                                         "/api/employees/create-first",
                                         "/hrms/api/employees/send-otp/**",
                                         "/hrms/api/employees/reset-password"
+
                                 ).permitAll()
                         // ✅ Swagger endpoints - Make these completely public
                         .requestMatchers(

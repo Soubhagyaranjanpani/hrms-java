@@ -22,6 +22,11 @@ public class StateController {
         List<StateResponse>res=useCase.getAllState();
         return res;
     }
+    @GetMapping("/getStateByCountryId/{id}")
+    public List<StateResponse> StateByCountry(@PathVariable Long id){
+        List<StateResponse> res=useCase.getStateByCountryId(id);
+        return res;
+    }
     @PutMapping("/updateById/{id}")
     public StateResponse updateState(@PathVariable Long id,@RequestBody StateCreateReq updatedData){
         StateResponse update=useCase.updateById(id,updatedData);
