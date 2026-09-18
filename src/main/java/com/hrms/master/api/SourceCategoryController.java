@@ -17,15 +17,14 @@ public class SourceCategoryController {
     private  SourceCategoryUseCase sourceCategoryUseCase;
 
     @PostMapping("/create")
-    public SourceCategoryResponse createSourceCategory(
-            @RequestBody SourceCategoryCreateReq request){
-
-        return sourceCategoryUseCase.createSourceCategory(request);
+    public String createSourceCategory(@RequestBody SourceCategoryCreateReq request){
+        sourceCategoryUseCase.createSourceCategory(request);
+        return "save";
     }
 
 
     @GetMapping("/list")
-    public List<SourceCategoryResponse> getAllSourceCategory(){
+    public List<SourceCategoryResponse> getAllSourceCategory() {
         return sourceCategoryUseCase.getAllSourceCategory();
     }
 

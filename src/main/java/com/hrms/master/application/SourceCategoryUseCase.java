@@ -1,8 +1,6 @@
 package com.hrms.master.application;
 
-
-
-import com.hrms.common.security.CurrentUser;
+import com.hrms.common.utils.CurrentUser;
 import com.hrms.master.domain.SourceCategory;
 import com.hrms.master.dto.SourceCategoryCreateReq;
 import com.hrms.master.dto.SourceCategoryResponse;
@@ -24,27 +22,14 @@ public class SourceCategoryUseCase {
 
 
 
-    public SourceCategoryResponse createSourceCategory(
-            SourceCategoryCreateReq request){
-
-        SourceCategory entity = new SourceCategory();
-        entity.setName(request.getName());
-        entity.setActive(true);
-
-        SourceCategory saved = sourceCategoryRepository.save(entity);
-
-        SourceCategoryResponse response = new SourceCategoryResponse();
-
-        response.setId(saved.getId());
-        response.setName(saved.getName());
-        response.setStatus("Y");
-
-        response.setActive(saved.getActive());
-        response.setCreateAt(LocalDateTime.now());
-        response.setCreatedBy(currentUser.getEmployee().getFirstName());
-//        response.setUpdatedBy(saved.getUpdatedBy());
-
-        return response;
+    public String createSourceCategory(SourceCategoryCreateReq request){
+        SourceCategory createObj=new SourceCategory();
+        createObj.setName(request.getName());
+        createObj.setStatus("y");
+        createObj.setCreatedAt(LocalDateTime.now());
+        createObj.setCreatedBy(currentUser.getEmployee().getFirstName());
+        SourceCategory save=sourceCategoryRepository.save(createObj);
+        return "source category save sucessfully";
 
     }
 
