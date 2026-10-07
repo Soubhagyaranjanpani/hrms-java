@@ -1,0 +1,207 @@
+package com.hrms.employee.api;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.hrms.common.utils.ResponseUtils;
+import com.hrms.employee.application.*;
+import com.hrms.employee.domain.Employee;
+import com.hrms.employee.dto.*;
+import com.hrms.common.dto.response.ApiResponse;
+import com.hrms.common.security.*;
+import com.hrms.employee.infrastructure.EmployeeRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.security.Principal;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/employees")
+@RequiredArgsConstructor
+public class EmployeeController {
+
+    private final CreateFirstEmployeeUseCase createFirstEmployeeUseCase;
+    private final LoginEmployeeUseCase loginEmployeeUseCase;
+    private final CreateEmployeeUseCase createEmployeeUseCase;
+    private final GetEmployeeProfileUseCase getEmployeeProfileUseCase;
+    private final ChangePasswordUseCase changePasswordUseCase;
+    private final ResetPasswordUseCase resetPasswordUseCase;
+    private final SendOtpUseCase sendOtpUseCase;
+    private final LogoutUseCase logoutUseCase;
+    private final GetCurrentEmployeeUseCase getCurrentEmployeeUseCase;
+    private final GetAllEmployeesUseCase getAllEmployeesUseCase;
+    private final DeleteEmployeeUseCase deleteEmployeeUseCase;
+    private final UpdateEmployeeUseCase updateEmployeeUseCase;
+    private final EmployeeRepository employeeRepo;
+
+
+    // =========================
+    // ADMIN APIs
+    // =========================
+
+//    @PreAuthorize("hasRole('ADMIN')")
+
+    private final BulkUploadEmployeesUseCase bulkUploadEmployeesUseCase;
+
+    @PostMapping(value = "/bulk-upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<String>> bulkUploadEmployees(
+            @RequestParam("file") MultipartFile file) {
+
+        return ResponseEntity.ok(
+                bulkUploadEmployeesUseCase.execute(file)
+        );
+    }
+
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<EmployeeProfileResponse>>> getAllEmployees(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return ResponseEntity.ok(
+                getAllEmployeesUseCase.execute(name, isActive, page, size)
+        );
+    }
+
+    //    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> deleteEmployee(@PathVariable Long id) {
+        return ResponseEntity.ok(deleteEmployeeUseCase.execute(id));
+    }
+
+    //    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<String>> updateEmployee(
+            @PathVariable Long id,
+            @RequestBody EmployeeUpdateReq request) {
+
+        return ResponseEntity.ok(updateEmployeeUseCase.execute(id, request));
+    }
+    //    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/create")
+    public ResponseEntity<ApiResponse<DefaultResponse>> createEmployee(
+            @RequestBody EmployeeCreationReq request) {
+        return ResponseEntity.ok(createEmployeeUseCase.execute(request));
+    }
+
+    // =========================
+    // PUBLIC APIs
+    // =========================
+
+    @PostMapping("/create-first")
+    public ResponseEntity<ApiResponse<DefaultResponse>> createFirstEmployee(
+            @RequestBody EmployeeCreationReq request) {
+        return ResponseEntity.ok(createFirstEmployeeUseCase.execute(request));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<JwtResponse>> login(@RequestBody JwtRequest request) {
+        return ResponseEntity.ok(loginEmployeeUseCase.execute(request));
+    }
+
+    @PostMapping("/send-otp/{username}")
+    public ResponseEntity<ApiResponse<DefaultResponse>> sendOtp(
+            @PathVariable String username) {
+        return ResponseEntity.ok(sendOtpUseCase.execute(username));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<DefaultResponse>> resetPassword(
+            @RequestBody ResetPasswordReq request) {
+        return ResponseEntity.ok(resetPasswordUseCase.execute(request));
+    }
+
+    // =========================
+    // AUTHENTICATED USER APIs
+    // =========================
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<DefaultResponse>> changePassword(
+            @RequestBody PasswordChangeReq request) {
+        return ResponseEntity.ok(changePasswordUseCase.execute(request));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<DefaultResponse>> logout(
+            HttpServletRequest request) {
+        return ResponseEntity.ok(logoutUseCase.execute(request));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/current")
+    public ResponseEntity<ApiResponse<String>> getCurrent(Principal principal) {
+        return ResponseEntity.ok(getCurrentEmployeeUseCase.execute(principal));
+    }
+
+    // =========================
+    // SELF + ADMIN ACCESS
+    // =========================
+
+    @PreAuthorize("hasRole('ADMIN') or #username == authentication.name")
+    @GetMapping("/profile/{username}")
+    public ResponseEntity<ApiResponse<EmployeeProfileResponse>> getProfile(
+            @PathVariable String username) {
+        return ResponseEntity.ok(getEmployeeProfileUseCase.execute(username));
+    }
+
+    @GetMapping("/by-grade/{gradeId}")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getEmployeesByGrade(
+            @PathVariable Long gradeId) {
+
+        List<Employee> employees = employeeRepo.findByGradeIdAndIsActiveTrueAndIsDeletedFalse(gradeId);
+        List<Map<String, Object>> result = employees.stream().map(emp -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", emp.getId());
+            map.put("name", emp.getFirstName() + " " + (emp.getLastName() != null ? emp.getLastName() : ""));
+            map.put("employeeCode", emp.getEmployeeCode());
+            map.put("departmentName", emp.getDepartment() != null ? emp.getDepartment().getName() : null);
+            map.put("branchName", emp.getBranch() != null ? emp.getBranch().getName() : null);
+            map.put("gradeId", emp.getGrade() != null ? emp.getGrade().getId() : null);
+            map.put("gradeName", emp.getGrade() != null ? emp.getGrade().getName() : null);
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(
+                ResponseUtils.createSuccessResponse(result, new TypeReference<>() {})
+        );
+    }
+
+    // =========================
+    // SEARCH API (Employee Name search / autocomplete)
+    // =========================
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> searchByName(
+            @RequestParam("query") String query) {
+
+        List<Employee> employees = employeeRepo
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(query, query);
+
+        List<Map<String, Object>> result = employees.stream().map(emp -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", emp.getId());
+            map.put("name", emp.getFirstName() + " " + (emp.getLastName() != null ? emp.getLastName() : ""));
+            map.put("employeeCode", emp.getEmployeeCode());
+            map.put("email", emp.getEmail());
+            map.put("departmentName", emp.getDepartment() != null ? emp.getDepartment().getName() : null);
+            map.put("branchName", emp.getBranch() != null ? emp.getBranch().getName() : null);
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(
+                ResponseUtils.createSuccessResponse(result, new TypeReference<>() {})
+        );
+    }
+
+}
