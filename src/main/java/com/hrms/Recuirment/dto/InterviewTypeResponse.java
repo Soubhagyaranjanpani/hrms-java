@@ -11,19 +11,13 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class InterviewRoundResponse {
+public class InterviewTypeResponse {
     private Long id;
-    private String roundCode;
-    private String roundName;
-    private String roundSequence;
-    private String mandatory;
-    private String maximumScore;
-    private String passingScore;
+    private String interviewTypeCode;
+    private String interviewTypeName;
+    private String description;
     private String status;
     private LocalDateTime lastChangeAt;
     private String lastChangeBy;
-    private Long departmentId;
-   //private String department;
-    //private String lastChangeAt
-
+    private Long interviewModeId;
 }
