@@ -27,7 +27,7 @@ public class CityUseCase {
     private final CurrentUser currentUser;
     public String saveCity(CityCreateReq createReq) {
         State state=stateRepository.findById(createReq.getStateId())
-                                   .orElseThrow(()->new RuntimeException("city not found"));
+                                   .orElseThrow(()->new RuntimeException("state not found"));
         City createReqObj=new City();
         createReqObj.setCityCode(createReq.getCityCode());
         createReqObj.setCityName(createReq.getCityName());

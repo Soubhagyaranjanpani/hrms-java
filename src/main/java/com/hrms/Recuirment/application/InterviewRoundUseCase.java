@@ -25,10 +25,27 @@ public class InterviewRoundUseCase {
     @Autowired
     private CurrentUser currentUser;
 
+
     public String saveInterviewRound(InterviewRoundReq createReq) {
-        Department department=departmentRepository.findById(createReq.getDepartmentId())
-                                           .orElseThrow(()->new RuntimeException("Department not found"));
-        InterviewRound createObj=new InterviewRound();
+
+        // Check whether the round code already exists
+        if (interviewRoundRepository.existsByRoundCode(
+                createReq.getRoundCode())) {
+
+            throw new RuntimeException(
+                    "Interview round code already exists: "
+                            + createReq.getRoundCode()
+            );
+        }
+
+        Department department = departmentRepository
+                .findById(createReq.getDepartmentId())
+                .orElseThrow(() ->
+                        new RuntimeException("Department not found")
+                );
+
+        InterviewRound createObj = new InterviewRound();
+
         createObj.setRoundCode(createReq.getRoundCode());
         createObj.setRoundName(createReq.getRoundName());
         createObj.setRoundSequence(createReq.getRoundSequence());
@@ -38,10 +55,15 @@ public class InterviewRoundUseCase {
         createObj.setStatus("y");
         createObj.setDepartment(department);
         createObj.setCreatedAt(LocalDateTime.now());
-        createObj.setCreatedBy(currentUser.getEmployee().getFirstName());
-        InterviewRound save=interviewRoundRepository.save(createObj);
-        return "InterviewRound Saved successfully";
+        createObj.setCreatedBy(
+                currentUser.getEmployee().getFirstName()
+        );
+
+        interviewRoundRepository.save(createObj);
+
+        return "Interview Round saved successfully";
     }
+
     public List<InterviewRoundResponse> getAllInterviewRound() {
         List<InterviewRoundResponse>interviewRoundList=interviewRoundRepository.findAll().stream().map(this::todto).toList();
         return interviewRoundList;

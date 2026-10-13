@@ -8,4 +8,6 @@ import java.util.List;
 public interface InterviewRoundRepository extends JpaRepository<InterviewRound,Long> {
 
     List<InterviewRound> findByDepartmentId(Long id);
+
+    boolean existsByRoundCode(String roundCode);
 }
