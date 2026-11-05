@@ -10,4 +10,6 @@ public interface InterviewRoundRepository extends JpaRepository<InterviewRound,L
     List<InterviewRound> findByDepartmentId(Long id);
 
     boolean existsByRoundCode(String roundCode);
+
+    boolean existsByRoundSequence(String roundSequence);
 }

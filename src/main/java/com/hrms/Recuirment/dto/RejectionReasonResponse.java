@@ -17,7 +17,7 @@ public class RejectionReasonResponse {
     private String reasonCode;
     private String reasonName;
     private String description;
-    private ReasonCategory reasonCategory;
+    private String reasonCategory;
     private Long reasonCategoryId;
     private String status;
     private LocalDateTime lastChangeAt;

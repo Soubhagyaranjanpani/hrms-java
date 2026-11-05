@@ -14,4 +14,5 @@ public interface RejectionReasonRepository extends JpaRepository<RejectionReason
 
     List<RejectionReasonResponse> findByReasonCategoryId(Long id);
 
+    boolean existsByReasonCodeAndIdNot(String reasonCode, Long id);
 }

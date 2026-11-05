@@ -23,7 +23,7 @@ public class InterviewRoundResponse {
     private LocalDateTime lastChangeAt;
     private String lastChangeBy;
     private Long departmentId;
-   //private String department;
+   private String departmentName;
     //private String lastChangeAt
 
 }

@@ -14,7 +14,7 @@ public class RejectionReasonController {
     @Autowired
     private RejectionReasonUseCase rejectionReasonUseCase;
 
-    @PostMapping("saveRejectionReason")
+    @PostMapping("/saveRejectionReason")
     public String saveRejectionReason(@RequestBody RejectionReasonReq rejectionReasonReq){
         return rejectionReasonUseCase.saveRejectionReason(rejectionReasonReq);
     }

@@ -48,6 +48,12 @@ public class InterviewRoundUseCase {
 
         createObj.setRoundCode(createReq.getRoundCode());
         createObj.setRoundName(createReq.getRoundName());
+
+        if (interviewRoundRepository.existsByRoundSequence(
+                createReq.getRoundSequence())) {
+            throw new RuntimeException("Round sequence already exists");
+        }
+
         createObj.setRoundSequence(createReq.getRoundSequence());
         createObj.setMandatory(createReq.getMandatory());
         createObj.setMaximumScore(createReq.getMaximumScore());
@@ -128,6 +134,7 @@ public class InterviewRoundUseCase {
         res.setMaximumScore(interviewRound.getMaximumScore());
         res.setPassingScore(interviewRound.getPassingScore());
         res.setDepartmentId(interviewRound.getDepartment().getId());
+        res.setDepartmentName(interviewRound.getDepartment().getName());
         res.setStatus(interviewRound.getStatus());
         res.setLastChangeAt(LocalDateTime.now());
         res.setLastChangeBy(currentUser.getEmployee().getFirstName());
@@ -146,6 +153,7 @@ public class InterviewRoundUseCase {
 
         Department department=new Department();
         department.setId(dto.getDepartmentId());
+        department.setName(dto.getDepartmentName());
         response.setDepartment(department);
         return response;
     }

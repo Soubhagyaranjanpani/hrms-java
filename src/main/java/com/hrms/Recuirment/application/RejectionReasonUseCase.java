@@ -26,21 +26,45 @@ public class RejectionReasonUseCase {
     private final CurrentUser currentUser;
 
 
-    public String saveRejectionReason(RejectionReasonReq rejectionReasonReq) {
+    public String saveRejectionReason(
+            RejectionReasonReq rejectionReasonReq) {
 
-        ReasonCategory reasonCategory=reasonCategoryRepository.findById(rejectionReasonReq.getReasonCategoryId())
-                                      .orElseThrow(()->new RuntimeException("ReasonCategory not found"));
+        // Check duplicate reason code
+        if (rejectionReasonRepository.existsByReasonCode(rejectionReasonReq.getReasonCode())) {
+            throw new RuntimeException("Rejection reason code already exists: " + rejectionReasonReq.getReasonCode());
+        }
 
-        RejectionReason createObj=new RejectionReason();
+        // Find reason category
+        ReasonCategory reasonCategory = reasonCategoryRepository.findById(rejectionReasonReq.getReasonCategoryId())
+                        .orElseThrow(() -> new RuntimeException("ReasonCategory not found"));
+
+//        // Check logged-in employee
+//        if (currentUser == null
+//                || currentUser.getEmployee() == null) {
+//
+//            throw new RuntimeException(
+//                    "Logged-in employee not found");
+//        }
+
+        RejectionReason createObj = new RejectionReason();
+
         createObj.setReasonCode(rejectionReasonReq.getReasonCode());
+
         createObj.setReasonName(rejectionReasonReq.getReasonName());
+
         createObj.setDescription(rejectionReasonReq.getDescription());
+
         createObj.setStatus("y");
+
         createObj.setReasonCategory(reasonCategory);
+
         createObj.setCreatedAt(LocalDateTime.now());
+
         createObj.setCreatedBy(currentUser.getEmployee().getFirstName());
-        RejectionReason save=rejectionReasonRepository.save(createObj);
-        return "rejectionReason save successfully";
+
+        rejectionReasonRepository.save(createObj);
+
+        return "Rejection reason saved successfully";
     }
     public List<RejectionReasonResponse> getAllRejectionReason() {
         List<RejectionReasonResponse>rejectionReasonList=rejectionReasonRepository.findAll().stream().map(this::todto).toList();
@@ -51,25 +75,46 @@ public class RejectionReasonUseCase {
         return rejectionReason;
     }
     public RejectionReasonResponse updateRejectionReason(Long id, RejectionReasonReq updatedData) {
-        RejectionReason existingData=rejectionReasonRepository.findById(id).orElseThrow(()->new RuntimeException("Rejection reason not found"+id));
-        if(existingData!=null){
-            //update basic fields
-            existingData.setReasonCode(updatedData.getReasonCode());
-            existingData.setReasonName(updatedData.getReasonName());
-            existingData.setDescription(updatedData.getDescription());
 
-            //get reasonCategory using reasonCategoryId
-            ReasonCategory reasonCategory=reasonCategoryRepository.findById(updatedData.getReasonCategoryId())
-                                          .orElseThrow(()->new RuntimeException("reasonCategory not found"));
-            if(reasonCategory!=null){
-                existingData.setReasonCategory(reasonCategory);
-            }
-            //save updated entity
-            RejectionReason savedData=rejectionReasonRepository.save(existingData);
-            return todto(savedData);
-        }else {
-            return null;
+        // Find the existing rejection reason
+        RejectionReason existingData = rejectionReasonRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Rejection reason not found: " + id));
+
+        //  Check whether the reason code belongs to another record
+        boolean codeAlreadyExists =
+                rejectionReasonRepository.existsByReasonCodeAndIdNot(
+                        updatedData.getReasonCode(),
+                        id
+                );
+
+        if (codeAlreadyExists) {
+            throw new RuntimeException(
+                    "Reason code already exists: "
+                            + updatedData.getReasonCode()
+            );
         }
+
+        // Update the basic fields
+        existingData.setReasonCode(updatedData.getReasonCode());
+
+        existingData.setReasonName(updatedData.getReasonName());
+
+        existingData.setDescription(updatedData.getDescription());
+
+        // Find the reason category
+        ReasonCategory reasonCategory = reasonCategoryRepository.findById(updatedData.getReasonCategoryId())
+                        .orElseThrow(() ->
+                                new RuntimeException("Reason category not found: "
+                                                + updatedData.getReasonCategoryId()));
+
+        //  Update the category
+        existingData.setReasonCategory(reasonCategory);
+
+        //  Save the updated record
+        RejectionReason savedData = rejectionReasonRepository.save(existingData);
+
+        //  Convert the saved entity to response DTO
+        return todto(savedData);
     }
     public String updateStatusById(Long id) {
         Optional<RejectionReason>optionalData=rejectionReasonRepository.findById(id);
@@ -96,6 +141,7 @@ public class RejectionReasonUseCase {
         res.setLastChangeAt(LocalDateTime.now());
         res.setLastChangeBy(currentUser.getEmployee().getFirstName());
         res.setReasonCategoryId(rejectionReason.getId());
+        res.setReasonCategory(rejectionReason.getReasonCategory().getReasonCategoryName());
         return res;
     }
     private RejectionReason toentity(RejectionReasonResponse dto){

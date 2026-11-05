@@ -52,29 +52,31 @@ public class InterviewTypeUseCase {
 
     public InterviewTypeResponse updateInterviewTypeById(Long id, InterviewTypeReq updatedData) {
         InterviewType existingData = interviewTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("interviewType not found" + id));
+                .orElseThrow(() -> new RuntimeException("interviewType not found " + id));
+
         if (existingData != null) {
-            //update basic fields
+            // update basic fields
             existingData.setInterviewTypeCode(updatedData.getInterviewTypeCode());
             existingData.setInterviewTypeName(updatedData.getInterviewTypeName());
             existingData.setDescription(updatedData.getDescription());
             existingData.setStatus(updatedData.getStatus());
 
-        //update interviewMode using interviewModeId
-        InterviewMode interviewMode = interviewModeRepository.findById(id)
-                .orElseThrow(() ->
-                        new RuntimeException("interviewMode not found"
-                                + updatedData.getInterviewModeId()));
-        if (interviewMode != null) {
-            existingData.setInterviewMode(interviewMode);
-        }
-        //save the entity
-        InterviewType savedData = interviewTypeRepository.save(existingData);
-        return todto(savedData);
-        }else {
+            // Use updatedData.getInterviewModeId() instead of id!
+            InterviewMode interviewMode = interviewModeRepository.findById(updatedData.getInterviewModeId())
+                    .orElseThrow(() ->
+                            new RuntimeException("interviewMode not found " + updatedData.getInterviewModeId()));
+
+            if (interviewMode != null) {
+                existingData.setInterviewMode(interviewMode);
+            }
+
+            // save the entity
+            InterviewType savedData = interviewTypeRepository.save(existingData);
+            return todto(savedData);
+        } else {
             return null;
         }
-}
+    }
     public String updateInterviewTypeStatus(Long id){
         Optional<InterviewType>optionalData=interviewTypeRepository.findById(id);
         if(optionalData.isPresent()){

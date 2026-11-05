@@ -5,9 +5,11 @@ import com.hrms.Recuirment.application.InterviewRoundUseCase;
 import com.hrms.Recuirment.dto.InterviewRoundReq;
 import com.hrms.Recuirment.dto.InterviewRoundResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("api/recuirment")
@@ -16,9 +18,24 @@ public class InterviewRoundController {
     private  InterviewRoundUseCase interviewRoundUseCase;
 
     @PostMapping("saveInterviewRound")
-    public String createInterviewRound(@RequestBody InterviewRoundReq createReq){
-        return interviewRoundUseCase.saveInterviewRound(createReq);
+    public ResponseEntity<Map<String, String>> createInterviewRound(
+            @RequestBody InterviewRoundReq createReq) {
+
+        try {
+            String response =
+                    interviewRoundUseCase.saveInterviewRound(createReq);
+
+            return ResponseEntity.ok(
+                    Map.of("message", response)
+            );
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("message", e.getMessage())
+            );
+        }
     }
+
     @GetMapping("getAllInterviewRound")
     public List<InterviewRoundResponse>getAllInterviewRound(){
         List<InterviewRoundResponse>res=interviewRoundUseCase.getAllInterviewRound();
