@@ -85,6 +85,7 @@ public class StateUseCase {
         res.setCountryId(state.getCountry().getId());
         res.setLastChangeAt(state.getCreatedAt());
         res.setLastChangeBy(state.getCreatedBy());
+        res.setCountryName(state.getCountry().getCountryName());
         return res;
     }
     public State toentity(StateResponse dto){

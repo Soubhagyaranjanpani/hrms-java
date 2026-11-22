@@ -19,6 +19,7 @@ public class StateResponse {
     private String lastChangeBy;
     private LocalDateTime lastChangeAt;
     private Long countryId;
+    private String countryName;
 
 
 }

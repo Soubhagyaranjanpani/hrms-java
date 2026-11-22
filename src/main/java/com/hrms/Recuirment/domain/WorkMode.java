@@ -18,7 +18,7 @@ public class WorkMode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name="id")
     private Long id;
-    @Column(name="workMode",updatable = false)
+    @Column(name="workMode")
     private String workModeName;
     @Column(name="status")
     private String status;
