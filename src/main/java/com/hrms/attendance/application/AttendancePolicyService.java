@@ -23,6 +23,52 @@ public class AttendancePolicyService {
         return repo.save(policy);
     }
 
+    public List<AttendancePolicy> getAll() {
+        return repo.findAll();
+    }
+
+    public AttendancePolicy getById(Long id) {
+        return repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Policy not found with id: " + id));
+    }
+
+    @Transactional
+    public AttendancePolicy update(Long id, AttendancePolicy req) {
+        AttendancePolicy existing = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Policy not found with id: " + id));
+
+        if (Boolean.TRUE.equals(req.getIsActive())) {
+            deactivateAllActivePolicies();
+            existing.setIsActive(true);
+        } else if (req.getIsActive() != null) {
+            existing.setIsActive(req.getIsActive());
+        }
+
+        if (req.getName() != null) existing.setName(req.getName());
+        if (req.getShiftStart() != null) existing.setShiftStart(req.getShiftStart());
+        if (req.getShiftEnd() != null) existing.setShiftEnd(req.getShiftEnd());
+        if (req.getGraceMinutes() != null) existing.setGraceMinutes(req.getGraceMinutes());
+        if (req.getHalfDayThresholdHours() != null) existing.setHalfDayThresholdHours(req.getHalfDayThresholdHours());
+        if (req.getFullDayHours() != null) existing.setFullDayHours(req.getFullDayHours());
+        if (req.getAllowOvertime() != null) existing.setAllowOvertime(req.getAllowOvertime());
+        if (req.getCheckInBeforeMinutes() != null) existing.setCheckInBeforeMinutes(req.getCheckInBeforeMinutes());
+        if (req.getEnforceCheckOutAfterShift() != null) existing.setEnforceCheckOutAfterShift(req.getEnforceCheckOutAfterShift());
+        if (req.getCheckOutGraceMinutes() != null) existing.setCheckOutGraceMinutes(req.getCheckOutGraceMinutes());
+        if (req.getBreakMinutes() != null) existing.setBreakMinutes(req.getBreakMinutes());
+        if (req.getIsNightShift() != null) existing.setIsNightShift(req.getIsNightShift());
+        if (req.getShiftCode() != null) existing.setShiftCode(req.getShiftCode());
+        if (req.getWeeklyOffPolicy() != null) existing.setWeeklyOffPolicy(req.getWeeklyOffPolicy());
+
+        return repo.save(existing);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        AttendancePolicy existing = repo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Policy not found with id: " + id));
+        repo.delete(existing);
+    }
+
     public AttendancePolicy getActive() {
         // FIXED: Get list instead of single Optional
         List<AttendancePolicy> activePolicies = repo.findByIsActiveTrue();

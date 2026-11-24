@@ -6,6 +6,7 @@ import com.hrms.attendance.dto.*;
 import com.hrms.common.dto.response.ApiResponse;
 import com.hrms.common.utils.ResponseUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -23,23 +24,24 @@ public class AttendanceController {
     private final GetAttendanceLeaveDashboardUseCase dashboardUseCase;
 
     @PostMapping("/check-in")
-    public ApiResponse<String> checkIn(Principal p) {
-
-        return (
-                checkInUseCase.execute(p.getName()));
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<String> checkIn(
+            @RequestParam(required = false) String shiftCode,
+            Principal p) {
+        return checkInUseCase.execute(p.getName(), shiftCode);
     }
 
     @PostMapping("/check-out")
-    public ApiResponse<String> checkOut(Principal p) {
-
-        return (
-                checkOutUseCase.execute(p.getName())
-        );
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<String> checkOut(
+            @RequestParam(required = false) String shiftCode,
+            Principal p) {
+        return checkOutUseCase.execute(p.getName(), shiftCode);
     }
 
     @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<AttendanceResponse>> my(Principal p) {
-
         return ResponseUtils.createSuccessResponse(
                 getMyAttendanceUseCase.execute(p.getName()),
                 new TypeReference<>() {}
@@ -47,22 +49,23 @@ public class AttendanceController {
     }
 
     @GetMapping("/summary")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<AttendanceSummaryResponse> summary(
             @RequestParam int month,
             @RequestParam int year,
             Principal p) {
-
         return ResponseUtils.createSuccessResponse(
                 summaryUseCase.execute(p.getName(), month, year),
                 new TypeReference<>() {}
         );
     }
+
     @GetMapping("/dashboard")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<AttendanceLeaveDashboardResponse>> dashboard(
             @RequestParam int month,
             @RequestParam int year,
             Principal p) {
-
         return ResponseUtils.createSuccessResponse(
                 dashboardUseCase.execute(p.getName(), month, year),
                 new TypeReference<>() {}

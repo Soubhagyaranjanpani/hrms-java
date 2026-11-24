@@ -27,4 +27,20 @@ public class AttendancePolicy {
     private Boolean allowOvertime;
 
     private Boolean isActive = true;
+
+    // Extended shift and punch policy configuration
+    private Integer checkInBeforeMinutes;
+
+    private Boolean enforceCheckOutAfterShift;
+
+    private Integer checkOutGraceMinutes;
+
+    private Integer breakMinutes;
+
+    private Boolean isNightShift;
+
+    private String shiftCode;
+
+    private String weeklyOffPolicy;
 }
+

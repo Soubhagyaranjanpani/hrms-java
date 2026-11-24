@@ -6,6 +6,9 @@ import com.hrms.attendance.dto.AttendanceSummaryResponse;
 import com.hrms.attendance.infrastructure.AttendanceRepository;
 import com.hrms.employee.domain.Employee;
 import com.hrms.employee.infrastructure.EmployeeRepository;
+import com.hrms.leave.domain.Leave;
+import com.hrms.leave.domain.enums.LeaveStatus;
+import com.hrms.leave.infrastructure.LeaveRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,7 @@ public class GetAttendanceSummaryUseCase {
 
     private final AttendanceRepository attendanceRepo;
     private final EmployeeRepository empRepo;
+    private final LeaveRepository leaveRepo;
 
     public AttendanceSummaryResponse execute(String email, int month, int year) {
 
@@ -53,6 +57,24 @@ public class GetAttendanceSummaryUseCase {
                 );
             }
         }
+
+        // Count approved leaves in summary if not already logged in attendance table
+        try {
+            List<Leave> leaves = leaveRepo.findByEmployeeAndStartDateLessThanEqualAndEndDateGreaterThanEqual(emp, end, start);
+            int approvedLeaveDays = 0;
+            for (Leave l : leaves) {
+                if (l.getStatus() == LeaveStatus.APPROVED && l.getStartDate() != null && l.getEndDate() != null) {
+                    LocalDate lStart = l.getStartDate().isBefore(start) ? start : l.getStartDate();
+                    LocalDate lEnd = l.getEndDate().isAfter(end) ? end : l.getEndDate();
+                    if (!lStart.isAfter(lEnd)) {
+                        approvedLeaveDays += (int) java.time.temporal.ChronoUnit.DAYS.between(lStart, lEnd) + 1;
+                    }
+                }
+            }
+            if (approvedLeaveDays > res.getLeaveDays()) {
+                res.setLeaveDays(approvedLeaveDays);
+            }
+        } catch (Exception ignored) {}
 
         return res;
     }
