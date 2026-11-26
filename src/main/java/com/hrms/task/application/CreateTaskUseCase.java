@@ -7,7 +7,6 @@ import com.hrms.master.domain.Department;
 import com.hrms.master.infrastructure.BranchRepository;
 import com.hrms.master.infrastructure.DepartmentRepository;
 import com.hrms.task.domain.Task;
-
 import com.hrms.task.domain.TaskPriority;
 import com.hrms.task.domain.TaskStatus;
 import com.hrms.task.dto.TaskCreateRequest;
@@ -28,6 +27,7 @@ public class CreateTaskUseCase {
     private final EmployeeRepository employeeRepo;
     private final DepartmentRepository departmentRepo;
     private final BranchRepository branchRepo;
+    private final AccessScopeService accessScope;          // NEW
 
     @Transactional
     public TaskResponse execute(TaskCreateRequest req, String userEmail) {
@@ -38,25 +38,30 @@ public class CreateTaskUseCase {
         Employee assignedBy = employeeRepo.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + userEmail));
 
+        // NEW ── role rule: Admin/HR -> Manager, Manager -> own Employee only
+        accessScope.assertCanAssign(assignedBy, assignedTo);
+
         Department dept = departmentRepo.findById(req.getDepartmentId())
                 .orElseThrow(() -> new RuntimeException("Department not found with ID: " + req.getDepartmentId()));
 
         Branch branch = branchRepo.findById(req.getBranchId())
                 .orElseThrow(() -> new RuntimeException("Branch not found with ID: " + req.getBranchId()));
 
-        // Validate department belongs to branch
         if (!dept.getBranch().getId().equals(branch.getId())) {
             throw new RuntimeException("Department " + dept.getName() +
                     " does not belong to branch " + branch.getName());
         }
 
+        // NEW ── department-wise: assignee must belong to the chosen department
+        if (assignedTo.getDepartment() != null && !assignedTo.getDepartment().getId().equals(dept.getId())) {
+            throw accessScope.badRequest("Selected employee does not belong to department " + dept.getName());
+        }
+
         Task task = new Task();
         task.setTitle(req.getTitle());
         task.setDescription(req.getDescription());
-
-        // ✅ Use enum conversion
         task.setPriority(TaskPriority.fromString(req.getPriority()));
-        task.setStatus(TaskStatus.valueOf(String.valueOf(TaskStatus.PENDING_APPROVAL)));
+        task.setStatus(TaskStatus.PENDING_APPROVAL);   // assignee must accept -> IN_PROGRESS
 
         task.setProgress(0);
         task.setAssignedTo(assignedTo);
@@ -79,9 +84,13 @@ public class CreateTaskUseCase {
             if (parent.getIsDeleted()) {
                 throw new RuntimeException("Cannot create subtask under a deleted parent task");
             }
-
             if (!parent.getBranch().getId().equals(branch.getId())) {
                 throw new RuntimeException("Subtask must belong to the same branch as parent task");
+            }
+            // NEW ── only the parent's assignee (e.g. the manager) or a reviewer may split it up
+            if (!accessScope.isSame(assignedBy, parent.getAssignedTo())
+                    && !accessScope.canReviewTask(assignedBy, parent)) {
+                throw accessScope.forbidden("You cannot create subtasks under this task");
             }
 
             task.setParentTask(parent);
@@ -98,15 +107,8 @@ public class CreateTaskUseCase {
         r.setTitle(t.getTitle());
         r.setDescription(t.getDescription());
 
-        // ✅ Map enums with both display name and code
-        if (t.getStatus() != null) {
-            r.setStatus(String.valueOf(t.getStatus()));
-
-        }
-
-        if (t.getPriority() != null) {
-            r.setPriority(String.valueOf(t.getPriority()));
-        }
+        if (t.getStatus() != null) r.setStatus(String.valueOf(t.getStatus()));
+        if (t.getPriority() != null) r.setPriority(String.valueOf(t.getPriority()));
 
         r.setProgress(t.getProgress());
         r.setEffort(t.getEffort());
@@ -132,7 +134,6 @@ public class CreateTaskUseCase {
         if (t.getBranch() != null) {
             r.setBranchId(t.getBranch().getId());
             r.setBranchName(t.getBranch().getName());
-
         }
 
         r.setDueDate(t.getDueDate());
@@ -149,13 +150,10 @@ public class CreateTaskUseCase {
         }
 
         if (t.getSubtasks() != null && !t.getSubtasks().isEmpty()) {
-            r.setSubtasks(
-                    t.getSubtasks()
-                            .stream()
-                            .filter(sub -> !sub.getIsDeleted())
-                            .map(this::mapToResponse)
-                            .toList()
-            );
+            r.setSubtasks(t.getSubtasks().stream()
+                    .filter(sub -> !sub.getIsDeleted())
+                    .map(this::mapToResponse)
+                    .toList());
         } else {
             r.setSubtasks(List.of());
         }

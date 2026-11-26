@@ -28,23 +28,30 @@ public class TaskController {
     private final RejectChangeRequestUseCase rejectChangeRequestUseCase;
     private final UpdateTaskUseCase updateTaskUseCase;
     private final GetEmployeeTaskStatsUseCase getEmployeeTaskStatsUseCase;
+    private final GetAssignableEmployeesUseCase getAssignableEmployeesUseCase;   // NEW
 
-    // ──────────────────────────────────────────────────────────
-    // GET /api/tasks
-    // Used by: TaskDashboard (stats), TaskList (table + kanban)
-    // ──────────────────────────────────────────────────────────
+    // GET /api/tasks  — now role-scoped
     @GetMapping
-    public ApiResponse<List<TaskResponse>> getAllTasks() {
+    public ApiResponse<List<TaskResponse>> getAllTasks(Principal p) {
         return ResponseUtils.createSuccessResponse(
-                getAllTasksUseCase.execute(),
+                getAllTasksUseCase.execute(p.getName()),
                 new TypeReference<>() {}
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // GET /api/tasks/my
-    // Used by: TaskList filter "Assigned to Me"
-    // ──────────────────────────────────────────────────────────
+    // NEW: GET /api/tasks/assignees?departmentId=
+    // "Assign To" dropdown, grouped by department.
+    //   Admin/HR -> managers,  Manager -> only his own employees
+    @GetMapping("/assignees")
+    public ApiResponse<List<DepartmentAssigneesResponse>> assignees(
+            @RequestParam(required = false) Long departmentId,
+            Principal p) {
+        return ResponseUtils.createSuccessResponse(
+                getAssignableEmployeesUseCase.execute(p.getName(), departmentId),
+                new TypeReference<>() {}
+        );
+    }
+
     @GetMapping("/my")
     public ApiResponse<List<TaskResponse>> myTasks(Principal p) {
         return ResponseUtils.createSuccessResponse(
@@ -53,10 +60,6 @@ public class TaskController {
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // GET /api/tasks/{id}
-    // Used by: TaskDetail (full detail with comments + subtasks + change request)
-    // ──────────────────────────────────────────────────────────
     @GetMapping("/{id}")
     public ApiResponse<TaskResponse> getTask(@PathVariable Long id) {
         return ResponseUtils.createSuccessResponse(
@@ -65,10 +68,6 @@ public class TaskController {
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // POST /api/tasks
-    // Used by: CreateTask form
-    // ──────────────────────────────────────────────────────────
     @PostMapping
     public ApiResponse<TaskResponse> create(
             @RequestBody TaskCreateRequest req,
@@ -79,10 +78,6 @@ public class TaskController {
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // POST /api/tasks/{id}/subtasks
-    // Used by: "Add Subtask" form inside TaskDetail overview tab
-    // ──────────────────────────────────────────────────────────
     @PostMapping("/{id}/subtasks")
     public ApiResponse<TaskResponse> createSubtask(
             @PathVariable Long id,
@@ -95,29 +90,17 @@ public class TaskController {
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // POST /api/tasks/status
-    // Used by: all action banners in TaskDetail
-    //   - Approve Task        → IN_PROGRESS
-    //   - Reject Task         → REJECTED
-    //   - Submit for Review   → IN_REVIEW
-    //   - Mark Complete       → COMPLETED
-    //   - Approve & Complete  → COMPLETED
-    //   - Send Back           → IN_PROGRESS
-    // ──────────────────────────────────────────────────────────
+    // POST /api/tasks/status — now needs Principal for role checks
     @PostMapping("/status")
     public ApiResponse<String> updateStatus(
-            @RequestBody TaskUpdateStatusRequest req) {
+            @RequestBody TaskUpdateStatusRequest req,
+            Principal p) {
         return ResponseUtils.createSuccessResponse(
-                updateTaskStatusUseCase.execute(req),
+                updateTaskStatusUseCase.execute(req, p.getName()),
                 new TypeReference<>() {}
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // POST /api/tasks/{id}/comments
-    // Used by: Comments tab in TaskDetail
-    // ──────────────────────────────────────────────────────────
     @PostMapping("/{id}/comments")
     public ApiResponse<String> addComment(
             @PathVariable Long id,
@@ -129,10 +112,6 @@ public class TaskController {
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // POST /api/tasks/{id}/change-request
-    // Used by: "Request Change" button in TaskDetail (IN_PROGRESS banner)
-    // ──────────────────────────────────────────────────────────
     @PostMapping("/{id}/change-request")
     public ApiResponse<String> sendChangeRequest(
             @PathVariable Long id,
@@ -143,10 +122,6 @@ public class TaskController {
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // POST /api/tasks/{id}/change-request/approve
-    // Used by: "Approve Change" button in TaskDetail (CHANGE_REQUESTED banner)
-    // ──────────────────────────────────────────────────────────
     @PostMapping("/{id}/change-request/approve")
     public ApiResponse<String> approveChangeRequest(@PathVariable Long id) {
         return ResponseUtils.createSuccessResponse(
@@ -155,10 +130,6 @@ public class TaskController {
         );
     }
 
-    // ──────────────────────────────────────────────────────────
-    // POST /api/tasks/{id}/change-request/reject
-    // Used by: "Reject Change" button in TaskDetail (CHANGE_REQUESTED banner)
-    // ──────────────────────────────────────────────────────────
     @PostMapping("/{id}/change-request/reject")
     public ApiResponse<String> rejectChangeRequest(@PathVariable Long id) {
         return ResponseUtils.createSuccessResponse(
@@ -177,32 +148,19 @@ public class TaskController {
         );
     }
 
-    /**
-     * PUT /api/tasks/{parentId}/subtasks/{subtaskId}
-     * Edit a subtask — opened from the subtask row edit button in TaskDetail
-     * Body: same shape as UpdateTaskRequest
-     */
     @PutMapping("/{parentId}/subtasks/{subtaskId}")
     public ApiResponse<TaskResponse> updateSubtask(
             @PathVariable Long parentId,
             @PathVariable Long subtaskId,
             @RequestBody UpdateTaskRequest req) {
-        // parentId is available for validation if needed
         return ResponseUtils.createSuccessResponse(
                 updateTaskUseCase.execute(subtaskId, req),
                 new TypeReference<>() {}
         );
     }
 
-
     @GetMapping("/stats/{employeeId}")
-    public ResponseEntity<EmployeeTaskStatsResponse> getStats(
-            @PathVariable Long employeeId) {
-
+    public ResponseEntity<EmployeeTaskStatsResponse> getStats(@PathVariable Long employeeId) {
         return ResponseEntity.ok(getEmployeeTaskStatsUseCase.execute(employeeId));
     }
-
-
-
 }
-
