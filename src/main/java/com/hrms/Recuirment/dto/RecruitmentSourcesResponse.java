@@ -8,7 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 
-public class RecruitmentSourcesResponse {
+public class  RecruitmentSourcesResponse {
 
     private  Long id;
 
@@ -16,7 +16,9 @@ public class RecruitmentSourcesResponse {
 
     private  String sourceName;
 
-    private SourceCategory category;
+    private Long categoryId;
+
+    private String categoryName;
 
     private String description;
 

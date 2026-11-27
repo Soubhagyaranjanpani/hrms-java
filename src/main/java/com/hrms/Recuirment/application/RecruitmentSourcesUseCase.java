@@ -45,6 +45,7 @@ public class RecruitmentSourcesUseCase {
                                         + recruitmentSources.getCategory()
                         ));
 
+
         obj.setCategory(category);
 
         obj.setCreatedAt(LocalDateTime.now());
@@ -66,7 +67,8 @@ public class RecruitmentSourcesUseCase {
         res.setSourceName(recruitmentSources.getSourceName());
         res.setDescription(recruitmentSources.getDescription());
         res.setDisplaySequence(recruitmentSources.getDisplaySequence());
-        res.setCategory(recruitmentSources.getCategory());
+        res.setCategoryName(recruitmentSources.getCategory().getName());
+        res.setCategoryId(recruitmentSources.getCategory().getId());
         res.setStatus(recruitmentSources.getStatus());
         return res;
     }
